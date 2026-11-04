@@ -1,0 +1,14 @@
+{
+  "tools": 14,
+  "dualUpload": true,
+  "workerCompleted": true,
+  "interactiveNodes": 4,
+  "contextHelp": [
+    "hover",
+    "leave",
+    "keyboard-focus",
+    "Escape"
+  ],
+  "mobileOverflow": false,
+  "jsErrors": []
+}

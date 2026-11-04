@@ -1,0 +1,5 @@
+id,label,group,log2FC
+GeneA,Alpha,Module1,2.1
+GeneB,Beta,Module1,-1.4
+GeneC,Gamma,Module2,0.7
+GeneD,Isolated,Module2,0

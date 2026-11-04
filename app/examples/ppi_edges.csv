@@ -1,0 +1,4 @@
+from,to,score
+GeneA,GeneB,0.85
+GeneB,GeneC,0.92
+GeneA,GeneC,0.75

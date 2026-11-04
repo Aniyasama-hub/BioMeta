@@ -1,0 +1,10 @@
+data/
+logs/
+app/results/
+results/
+.Rhistory
+.RData
+*.log
+app/tests/_output/
+app/tests/_browser/
+app/tests/_integration/

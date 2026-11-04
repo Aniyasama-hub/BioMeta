@@ -1,0 +1,4 @@
+chr,start,end,label
+chr1,100000,150000,GeneA
+chr2,200000,250000,GeneB
+chr3,300000,350000,GeneC

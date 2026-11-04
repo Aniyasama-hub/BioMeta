@@ -1,0 +1,6 @@
+gene_id,Sample_A1,Sample_A2,Sample_A3,Sample_B1,Sample_B2,Sample_B3
+GeneA,2,3,2,8,9,7
+GeneB,9,8,10,2,3,2
+GeneC,3,4,2,6,7,5
+GeneD,7,8,6,4,3,5
+GeneE,2,5,3,4,8,6
