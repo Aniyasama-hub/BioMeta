@@ -1,5 +1,5 @@
 param(
-    [string]$Rscript = 'D:\R\R-4.5.1\bin\Rscript.exe',
+    [string]$Rscript,
     [ValidateRange(1024, 65515)][int]$Port = 7878,
     [switch]$NoBrowser
 )
@@ -10,7 +10,29 @@ $logRoot = Join-Path $PSScriptRoot 'logs'
 $logFile = $null
 $oldLocale = $env:LC_ALL
 try {
-    if (-not (Test-Path -LiteralPath $Rscript -PathType Leaf)) {
+    $settingsPath = Join-Path $appRoot 'results/toolbox/settings.json'
+    if (-not $PSBoundParameters.ContainsKey('Rscript') -and (Test-Path -LiteralPath $settingsPath)) {
+        $settings = Get-Content -LiteralPath $settingsPath -Encoding UTF8 -Raw | ConvertFrom-Json
+        if ($settings.rscript) { $Rscript = $settings.rscript }
+    }
+    if (-not $Rscript) {
+        $command = Get-Command Rscript.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($command) { $Rscript = $command.Source }
+    }
+    if (-not $Rscript) {
+        $locations = @($env:R_HOME)
+        foreach ($key in @('HKCU:\SOFTWARE\R-core\R', 'HKLM:\SOFTWARE\R-core\R',
+                           'HKLM:\SOFTWARE\WOW6432Node\R-core\R')) {
+            $installation = Get-ItemProperty -LiteralPath $key -Name InstallPath -ErrorAction SilentlyContinue
+            if ($installation.InstallPath) { $locations += $installation.InstallPath }
+        }
+        foreach ($location in $locations) {
+            if (-not $location) { continue }
+            $candidate = Join-Path $location 'bin\Rscript.exe'
+            if (Test-Path -LiteralPath $candidate -PathType Leaf) { $Rscript = $candidate; break }
+        }
+    }
+    if (-not $Rscript -or -not (Test-Path -LiteralPath $Rscript -PathType Leaf)) {
         throw "Rscript not found: $Rscript. Use -Rscript to select an installed R."
     }
     New-Item -ItemType Directory -Path $logRoot -Force | Out-Null

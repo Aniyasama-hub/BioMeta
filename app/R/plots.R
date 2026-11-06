@@ -3,7 +3,7 @@
   group_a = "#426C87", group_b = "#B8523E", threshold_color = "#847D72", threshold_width = 0.5,
   na_color = "#E1DDD3", cell_border = "#FFFFFF", cell_border_width = 0.3,
   row_font_size = 11, column_font_size = 10, column_rotation = 45, show_gene_names = TRUE, heatmap_raster = FALSE,
-  enrichment_kind = "dot", enrichment_low = "#B9C8BB", enrichment_high = "#B44A37",
+  enrichment_kind = "dot", enrichment_orientation = "horizontal", enrichment_low = "#B9C8BB", enrichment_high = "#B44A37",
   enrichment_size_min = 3, enrichment_size_max = 9, term_wrap = 38,
   curve_color = "#A44032", curve_width = 0.9, positive_color = "#B8523E", negative_color = "#426C87", rug_color = "#292F2D", rug_width = 0.3,
   network_color_by = "auto", network_node_color = "#426C87", network_low = "#426C87", network_mid = "#EAE5D9", network_high = "#B8523E",
@@ -47,7 +47,7 @@
 
 # 合并设置并规范颜色输入，避免 list 传入 ggplot/ComplexHeatmap 后类型不兼容。
 .resolve_plot_style <- function(style) {
-  result <- utils::modifyList(utils::modifyList(.default_plot_style(), .presentation_defaults()), style %||% list())
+  result <- utils::modifyList(utils::modifyList(c(.default_plot_style(), tb_legend_defaults()[-1L]), .presentation_defaults()), style %||% list())
   result$formats <- tolower(result$formats)
   allowed_formats <- c("png", "svg", "tiff", "pdf")
   if (!length(result$formats) || !all(result$formats %in% allowed_formats)) {
@@ -59,9 +59,9 @@
   }
   result$palette <- unlist(result$palette, use.names = FALSE)
   if (!length(result$palette)) stop("style$palette 不能为空。", call. = FALSE)
-  sides <- c("left", "right", "top", "bottom")
+  sides <- c("left", "right", "top", "bottom", "none")
   if (length(result$legend_position) != 1L || !result$legend_position %in% sides) {
-    stop("style$legend_position 仅支持 left、right、top、bottom。", call. = FALSE)
+    stop("style$legend_position 仅支持 left、right、top、bottom、none。", call. = FALSE)
   }
   result
 }
@@ -93,7 +93,7 @@
   if (format == "tiff") grDevices::tiff(path, width = style$width, height = style$height, units = "in", res = style$dpi, compression = "lzw", bg = style$background)
   if (format == "pdf") grDevices::pdf(path, width = style$width, height = style$height, bg = style$background, family = style$font_family)
   on.exit(grDevices::dev.off(), add = TRUE)
-  ComplexHeatmap::draw(heatmap, heatmap_legend_side = style$legend_position, background = style$background)
+  .draw_heatmap_legends(heatmap$plot, heatmap$legends, style)
 }
 
 # 导出 ComplexHeatmap 至要求的图像格式。
@@ -112,7 +112,13 @@
     switch(style$plot_theme, minimal = ggplot2::theme_minimal, bw = ggplot2::theme_bw,
            ggplot2::theme_classic)(base_size = style$base_size, base_family = style$font_family)
   }
-  theme + ggplot2::theme(legend.position = style$legend_position,
+  align <- .legend_alignment(style)
+  justify <- if (style$legend_position %in% c("top", "bottom")) c(align, .5) else c(.5, 1-align)
+  theme + ggplot2::theme(legend.position = style$legend_position, legend.justification = justify,
+    legend.text = ggplot2::element_text(size = style$legend_text_size),
+    legend.title = ggplot2::element_text(size = style$legend_title_size),
+    legend.key.size = grid::unit(style$legend_key_size, "mm"),
+    legend.box.spacing = grid::unit(style$legend_gap, "mm"),
     plot.background = ggplot2::element_rect(fill = style$background, color = NA),
     panel.background = ggplot2::element_rect(fill = style$background, color = NA))
 }
@@ -129,6 +135,28 @@
     ggplot2::labs(x = sprintf("PC1 (%.1f%%)", variance[[1]]), y = sprintf("PC2 (%.1f%%)", variance[[2]]), color = NULL) +
     .plot_theme(style)
   p <- p + ggplot2::scale_color_manual(values = .group_palette(levels(data$condition), style$group_colors, style$palette))
+  if (isTRUE(style$pca_ellipse_2d)) {
+    theta <- seq(0, 2*pi, length.out = 121L)
+    regions <- lapply(split(data, data$condition), function(group) {
+      region <- .pca_region(group[c("PC1", "PC2")], style$pca_confidence, style$pca_region_type)
+      if (is.null(region)) {
+        message("二维 PCA 置信椭圆跳过分组：", group$condition[1L], "（样本不足或协方差退化）")
+        return(NULL)
+      }
+      xy <- sweep(cbind(cos(theta), sin(theta)) %*% t(region$axes), 2L, region$center, "+")
+      data.frame(PC1 = xy[, 1L], PC2 = xy[, 2L], condition = group$condition[1L])
+    })
+    ellipses <- do.call(rbind, regions)
+    if (!is.null(ellipses)) {
+      colors <- .group_palette(levels(data$condition), style$group_colors, style$palette)
+      ellipses$fill <- vapply(as.character(ellipses$condition), function(group) .pca_region_fill(colors[[group]], style), character(1))
+      region <- ggplot2::geom_polygon(data = ellipses, ggplot2::aes(group = condition),
+        fill = ellipses$fill, linewidth = .55, show.legend = FALSE)
+      # Paint behind the sample points.
+      p$layers <- c(list(region), p$layers)
+      p <- p + ggplot2::coord_fixed()
+    }
+  }
   if (style$show_sample_labels) {
     p <- p + ggrepel::geom_text_repel(
       ggplot2::aes(label = sample_id), size = style$label_size,
@@ -178,11 +206,16 @@
     if (value_range[[1]] == value_range[[2]]) value_range <- value_range + c(-0.5, 0.5)
     breaks <- seq(value_range[[1]], value_range[[2]], length.out = 3)
   }
-  palette <- circlize::colorRamp2(breaks, c(style$low, style$mid, style$high))
+  colors <- tb_gradient_ramp(style, c(style$low, style$mid, style$high))
+  palette <- circlize::colorRamp2(seq(breaks[1], tail(breaks, 1), length.out = length(colors)), colors)
   row_annotation <- extras$row_annotation
   column_annotation <- extras$sample_annotation
   left_ha <- NULL
   top_ha <- NULL
+  column_split <- NULL
+  column_titles <- NULL
+  legends <- list(.heatmap_color_legend(switch(matrix_units, row_zscore = "Row z-score",
+    "ssGSEA score" = "ssGSEA score", "Expression"), palette))
   row_split <- NULL
   if (!is.null(row_annotation)) {
     if (nrow(row_annotation) != nrow(data)) stop("row_annotation 行数需与热图行数一致。", call. = FALSE)
@@ -197,6 +230,7 @@
       }
       row_annotation <- .prepare_annotation(row_annotation, style$group_colors, style$palette)
       annotation_colors <- attr(row_annotation, "annotation_colors")
+      legends <- c(legends, .heatmap_annotation_legends(annotation_colors))
       left_ha <- ComplexHeatmap::rowAnnotation(df = row_annotation, col = annotation_colors, show_annotation_name = TRUE)
       if ("Pathway" %in% keep) {
         pathway_order <- as.character(row_annotation$Pathway)
@@ -211,11 +245,20 @@
     if (nrow(column_annotation) != ncol(data)) stop("sample_annotation 行数需与热图列数一致。", call. = FALSE)
     column_annotation <- column_annotation[column_order, , drop = FALSE]
     keep <- intersect(c("condition", "batch"), names(column_annotation))
+    if ("batch" %in% keep && length(unique(column_annotation$batch)) < 2L) keep <- setdiff(keep, "batch")
     if (length(keep)) {
       column_annotation <- column_annotation[, keep, drop = FALSE]
       column_annotation <- .prepare_annotation(column_annotation, style$group_colors, style$palette)
       annotation_colors <- attr(column_annotation, "annotation_colors")
-      top_ha <- ComplexHeatmap::HeatmapAnnotation(df = column_annotation, col = annotation_colors, show_annotation_name = TRUE)
+      if ("condition" %in% keep) {
+        runs <- rle(as.character(column_annotation$condition))
+        column_titles <- runs$values
+        column_split <- factor(rep(seq_along(runs$lengths), runs$lengths), levels = seq_along(runs$lengths))
+      }
+      if ("batch" %in% keep) legends <- c(legends,
+        .heatmap_annotation_legends(list("Technical batch" = annotation_colors$batch)))
+      top_ha <- ComplexHeatmap::HeatmapAnnotation(df = column_annotation, col = annotation_colors,
+        show_annotation_name = FALSE, show_legend = FALSE)
     }
   }
   row_labels <- rownames(matrix_data)
@@ -223,17 +266,25 @@
     if (length(extras$row_labels) != nrow(data)) stop("extras$row_labels 长度需与热图行数一致。", call. = FALSE)
     row_labels <- as.character(extras$row_labels[row_order])
   }
-  ComplexHeatmap::Heatmap(
+  heatmap <- ComplexHeatmap::Heatmap(
     matrix_data, name = "Expression", col = palette, cluster_rows = FALSE,
     cluster_columns = FALSE, cluster_row_slices = FALSE, row_split = row_split,
+    column_split = column_split, column_title = column_titles, cluster_column_slices = FALSE,
+    column_title_gp = grid::gpar(fontfamily = style$font_family, fontsize = style$column_font_size, fontface = "bold"),
+    column_gap = grid::unit(1.2, "mm"),
     show_row_names = style$show_gene_names, row_labels = row_labels,
     show_column_names = style$show_sample_labels, column_names_rot = style$column_rotation,
     na_col = style$na_color, rect_gp = grid::gpar(col = style$cell_border, lwd = style$cell_border_width),
     use_raster = style$heatmap_raster, left_annotation = left_ha, top_annotation = top_ha,
+    row_names_max_width = if (all(c("term_id", "description") %in% names(extras$statistics))) {
+      ComplexHeatmap::max_text_width(row_labels,
+        gp = grid::gpar(fontsize = style$row_font_size, fontfamily = style$font_family)) + grid::unit(2, "mm")
+    } else grid::unit(6, "cm"),
     row_names_gp = grid::gpar(fontsize = style$row_font_size, fontfamily = style$font_family),
     column_names_gp = grid::gpar(fontsize = style$column_font_size, fontfamily = style$font_family),
-    heatmap_legend_param = list(title = if (matrix_units == "row_zscore") "Row z-score" else "Expression")
+    show_heatmap_legend = FALSE
   )
+  list(plot = heatmap, legends = legends)
 }
 
 # 为分类注释使用用户颜色，缺失类别按固定莫兰迪色板确定性补色。
@@ -265,32 +316,45 @@
   required <- c("term_id", "description", "padj", "gene_ratio", "count", "source")
   if (!all(required %in% names(data))) stop("Enrichment data 缺少必要列。")
   data$minus_log10_padj <- -log10(pmax(data$padj, .Machine$double.xmin))
-  data$term_axis <- factor(data$term_id, levels = rev(unique(data$term_id)))
+  vertical <- style$enrichment_kind == "bar" && style$enrichment_orientation == "vertical"
+  data <- data[order(-data$gene_ratio, data$padj, data$term_id), , drop = FALSE]
+  levels <- unique(data$term_id)
+  data$term_axis <- factor(data$term_id, levels = if (vertical) levels else rev(levels))
+  if ("ontology" %in% names(data) && length(unique(data$ontology)) > 1L)
+    data$description <- paste0("[", data$ontology, "] ", data$description)
   terms <- unique(data[c("term_id", "description")])
   labels <- vapply(terms$description, function(x) paste(strwrap(x, width = style$term_wrap), collapse = "\n"), character(1))
   label_map <- stats::setNames(labels, terms$term_id)
-  p <- ggplot2::ggplot(data, ggplot2::aes(x = gene_ratio, y = term_axis))
+  axes <- if (vertical) ggplot2::aes(x = term_axis, y = gene_ratio) else ggplot2::aes(x = gene_ratio, y = term_axis)
+  p <- ggplot2::ggplot(data, axes)
   if (style$enrichment_kind == "bar") {
     p <- p + ggplot2::geom_col(ggplot2::aes(fill = minus_log10_padj), alpha = style$point_alpha, width = 0.7) +
-      ggplot2::scale_fill_gradient(low = style$enrichment_low, high = style$enrichment_high, name = "-log10 FDR")
+      ggplot2::scale_fill_gradientn(colours = tb_gradient_ramp(style, c(style$enrichment_low, style$enrichment_high)), name = "-log10 FDR")
   } else {
     p <- p + ggplot2::geom_point(ggplot2::aes(size = count, color = minus_log10_padj), alpha = style$point_alpha) +
       ggplot2::scale_size_continuous(range = c(style$enrichment_size_min, style$enrichment_size_max), name = "Gene count") +
-      ggplot2::scale_color_gradient(low = style$enrichment_low, high = style$enrichment_high, name = "-log10 FDR")
+      ggplot2::scale_color_gradientn(colours = tb_gradient_ramp(style, c(style$enrichment_low, style$enrichment_high)), name = "-log10 FDR")
   }
-  p + ggplot2::scale_y_discrete(labels = label_map) + ggplot2::labs(x = "Gene ratio", y = NULL) + .plot_theme(style)
+  p <- p + .plot_theme(style)
+  if (vertical) return(p + ggplot2::scale_x_discrete(labels = label_map) +
+    ggplot2::labs(x = NULL, y = "Gene ratio") + ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)))
+  p + ggplot2::scale_y_discrete(labels = label_map) + ggplot2::labs(x = "Gene ratio", y = NULL)
 }
 
 # GSEA 三联图按输入 rank 顺序展示 ES、命中位置和排序统计量。
 .plot_gsea <- function(data, extras, style) {
   required <- c("rank", "running_es", "hit", "rank_score")
   if (!all(required %in% names(data))) stop("GSEA data 缺少必要列。")
-  title <- sprintf("%s | NES = %.3f | FDR = %.3g", extras$pathway_id %||% "GSEA", as.numeric(extras$nes), as.numeric(extras$padj))
+  id <- extras$pathway_id %||% "GSEA"
+  title <- paste(strwrap(extras$pathway_name %||% id, width = max(18, floor(style$width * 6))), collapse = "\n")
+  statistics <- sprintf("NES = %.3f  |  FDR = %.3g", as.numeric(extras$nes), as.numeric(extras$padj))
+  if (!is.null(extras$pvalue)) statistics <- paste(statistics, sprintf("P = %.3g", extras$pvalue), sep = "  |  ")
+  subtitle <- paste(paste(c(extras$database, id), collapse = " · "), statistics, sep = "\n")
   theme <- .plot_theme(style) + ggplot2::theme(legend.position = "none")
   p1 <- ggplot2::ggplot(data, ggplot2::aes(rank, running_es)) +
     ggplot2::geom_line(color = style$curve_color, linewidth = style$curve_width) +
     ggplot2::geom_hline(yintercept = 0, color = "grey75", linewidth = 0.3) +
-    ggplot2::coord_cartesian(xlim = c(1, nrow(data))) + ggplot2::labs(x = NULL, y = "Running ES", title = title) + theme
+    ggplot2::coord_cartesian(xlim = c(1, nrow(data))) + ggplot2::labs(x = NULL, y = "Running ES", title = title, subtitle = subtitle) + theme
   hits <- data[data$hit %in% TRUE, , drop = FALSE]
   p2 <- ggplot2::ggplot(hits, ggplot2::aes(x = rank)) +
     ggplot2::geom_segment(ggplot2::aes(xend = rank, y = 0, yend = 1), color = style$rug_color, linewidth = style$rug_width) +
@@ -318,7 +382,9 @@
   if (mode == "log2FC") {
     if (!any(is.finite(data$log2FoldChange))) stop("Node 没有可用 log2FC，请改用统一颜色或分组着色。")
     p <- p + ggplot2::geom_point(data = data, ggplot2::aes(x, y, size = degree, color = log2FoldChange)) +
-      ggplot2::scale_color_gradient2(low = style$network_low, mid = style$network_mid, high = style$network_high, midpoint = 0, name = "log2FC")
+      ggplot2::scale_color_gradientn(colours = tb_gradient_ramp(style, c(style$network_low, style$network_mid, style$network_high)),
+        limits = c(-max(abs(data$log2FoldChange), .Machine$double.eps, na.rm = TRUE),
+                    max(abs(data$log2FoldChange), .Machine$double.eps, na.rm = TRUE)), name = "log2FC")
   } else if (mode == "group") {
     palette <- .group_palette(unique(data$group), palette = c(style$network_node_color, "#B8523E", "#A89046", "#697C61", "#8F6D86"))
     p <- p + ggplot2::geom_point(data = data, ggplot2::aes(x, y, size = degree, color = group)) + ggplot2::scale_color_manual(values = palette, name = "Group")
@@ -334,13 +400,43 @@
 }
 
 # 按 bundle 类型调用绘图函数并返回导出文件路径。
+# Keep stable pathway IDs in the score matrix and join descriptions only for display.
+.gsva_pathway_labels <- function(ids, statistics, width) {
+  labels <- trimws(as.character(statistics$description[match(ids, statistics$term_id)]))
+  missing <- is.na(labels) | !nzchar(labels) | grepl("^https?://", labels, ignore.case = TRUE)
+  labels[missing] <- ids[missing]
+  labels <- trimws(gsub("[[:space:]_]+", " ", labels))
+  width <- max(1L, as.integer(width))
+  vapply(labels, function(label) {
+    lines <- strwrap(label, width = width + 1L)
+    pieces <- lapply(lines, function(line) {
+      starts <- seq.int(1L, nchar(line), by = width)
+      substring(line, starts, starts + width - 1L)
+    })
+    paste(unlist(pieces, use.names = FALSE), collapse = "\n")
+  }, character(1), USE.NAMES = FALSE)
+}
+
 render_bundle <- function(bundle, style = list(), output_dir = ".") {
-  if (!is.list(bundle) || is.null(bundle$type) || is.null(bundle$data)) {
+  if (!is.list(bundle) || is.null(bundle$type) || (bundle$type != "gsea_collection" && is.null(bundle$data))) {
     stop("bundle 必须包含 type 与 data。", call. = FALSE)
   }
   style <- .resolve_plot_style(style)
+  if (bundle$type == "gsea_collection") {
+    paths <- lapply(names(bundle$curves), function(name)
+      render_bundle(bundle$curves[[name]], style, file.path(output_dir, name)))
+    return(unlist(paths, use.names = FALSE))
+  }
   extras <- bundle$extras %||% list()
   if (bundle$type == "heatmap") {
+    if (style$show_gene_names && all(c("term_id", "description") %in% names(extras$statistics))) {
+      extras$row_labels <- .gsva_pathway_labels(rownames(bundle$data), extras$statistics, style$term_wrap)
+      longest <- max(lengths(strsplit(extras$row_labels, "\n", fixed = TRUE)))
+      if (longest > 1L) {
+        # Give every heatmap row room for its label at the requested font size.
+        style$height <- max(style$height, 1.5 + nrow(bundle$data) * longest * style$row_font_size * 1.2 / 72)
+      }
+    }
     heatmap <- .plot_heatmap(bundle$data, extras, style)
     return(.save_heatmap_bundle(heatmap, output_dir, style))
   }
@@ -354,4 +450,93 @@ render_bundle <- function(bundle, style = list(), output_dir = ".") {
     stop(sprintf("暂不支持的 bundle$type：%s", bundle$type), call. = FALSE)
   )
   .save_ggplot_bundle(plot, output_dir, style)
+}
+
+# Hotelling T² confidence region for a group mean in a fixed PCA projection.
+.pca_region <- function(points, level, type = "mean") {
+  points <- as.matrix(points)
+  d <- ncol(points)
+  n <- nrow(points)
+  if (n <= d || any(!is.finite(points))) return(NULL)
+  covariance <- eigen(stats::cov(points), symmetric = TRUE)
+  if (min(covariance$values) <= max(covariance$values) * 1e-10) return(NULL)
+  # The mean has covariance S/n. An independent future sample minus the mean uses (1 + 1/n) S.
+  variance_multiplier <- if (type == "prediction") 1 + 1/n else 1/n
+  radius <- sqrt(variance_multiplier * d * (n - 1) / (n - d) * stats::qf(level / 100, d, n - d))
+  axes <- covariance$vectors %*% diag(sqrt(covariance$values) * radius, nrow = d)
+  list(center = colMeans(points), axes = axes)
+}
+
+.pca_region_fill <- function(group_color, style) {
+  if (style$pca_region_fill == "outline") return(NA_character_)
+  color <- if (style$pca_region_fill == "solid") style$pca_region_color else group_color
+  grDevices::adjustcolor(color, style$pca_region_alpha)
+}
+
+.legend_alignment <- function(style) unname(c(start = 0, center = .5, end = 1)[style$legend_align])
+
+.heatmap_color_legend <- function(title, colors, at = NULL) list(title = title, col_fun = colors, at = at)
+
+.heatmap_annotation_legends <- function(colors) {
+  lapply(names(colors), function(name) list(title = name, colors = colors[[name]]))
+}
+
+.draw_heatmap_legends <- function(heatmap, legends, style, ...) {
+  side <- style$legend_position
+  if (side == "none" || !length(legends))
+    return(ComplexHeatmap::draw(heatmap, show_heatmap_legend = FALSE, show_annotation_legend = FALSE,
+      background = style$background, ...))
+  horizontal <- side %in% c("top", "bottom")
+  dimensions <- c(style$width, style$height) * 25.4
+  make <- function(scale) {
+    key <- style$legend_key_size * scale
+    label_gp <- grid::gpar(fontsize = style$legend_text_size * scale, fontfamily = style$font_family)
+    title_gp <- grid::gpar(fontsize = style$legend_title_size * scale, fontfamily = style$font_family, fontface = "bold")
+    guides <- lapply(legends, function(item) {
+      args <- list(title = item$title, labels_gp = label_gp, title_gp = title_gp)
+      if (!is.null(item$col_fun)) {
+        args <- c(args, list(col_fun = item$col_fun,
+          direction = if (horizontal) "horizontal" else "vertical"))
+        if (!is.null(item$at)) args$at <- item$at
+        args[[if (horizontal) "legend_width" else "legend_height"]] <- grid::unit(max(key * 6, style$legend_text_size * scale * 2.1), "mm")
+        args[[if (horizontal) "grid_height" else "grid_width"]] <- grid::unit(key * .7, "mm")
+      } else {
+        args <- c(args, list(labels = names(item$colors), legend_gp = grid::gpar(fill = unname(item$colors)),
+          grid_width = grid::unit(key, "mm"), grid_height = grid::unit(key, "mm"),
+          ncol = if (horizontal) min(4L, length(item$colors)) else 1L))
+      }
+      do.call(ComplexHeatmap::Legend, args)
+    })
+    do.call(ComplexHeatmap::packLegend, c(guides, list(direction = if (horizontal) "horizontal" else "vertical",
+      max_width = grid::unit(dimensions[1L] * .92, "mm"), max_height = grid::unit(dimensions[2L] * .92, "mm"))))
+  }
+  measure <- function(guides) c(grid::convertWidth(grid::grobWidth(guides@grob), "mm", valueOnly = TRUE),
+    grid::convertHeight(grid::grobHeight(guides@grob), "mm", valueOnly = TRUE))
+  grid::grid.newpage()
+  scale <- 1
+  for (i in seq_len(5L)) {
+    guides <- make(scale)
+    size <- measure(guides)
+    limit <- dimensions * if (horizontal) c(.92, .36) else c(.40, .92)
+    factor <- min(1, limit / pmax(size, .01))
+    if (factor >= .99) break
+    scale <- scale * factor * .95
+  }
+  axis <- if (horizontal) 2L else 1L
+  gap <- min(style$legend_gap + 4, dimensions[axis] * .12)
+  space <- (size[axis] + gap) / dimensions[axis]
+  if (space > .65) stop("图例尺寸超过画布可用空间，请减小字号或扩大画布。")
+  x <- if (side == "left") space else 0
+  y <- if (side == "bottom") space else 0
+  grid::pushViewport(grid::viewport(x = x, y = y, width = if (horizontal) 1 else 1-space,
+    height = if (horizontal) 1-space else 1, just = c("left", "bottom"), clip = "on"))
+  result <- tryCatch(ComplexHeatmap::draw(heatmap, newpage = FALSE, show_heatmap_legend = FALSE,
+    show_annotation_legend = FALSE, background = style$background, ...), finally = grid::upViewport())
+  align <- .legend_alignment(style)
+  gx <- if (horizontal) .04 + .92 * align else if (side == "left") space / 2 else 1 - space / 2
+  gy <- if (!horizontal) .96 - .92 * align else if (side == "bottom") space / 2 else 1 - space / 2
+  ComplexHeatmap::draw(guides, x = grid::unit(gx, "npc"), y = grid::unit(gy, "npc"),
+    just = if (horizontal) c(c("left", "center", "right")[match(align, c(0,.5,1))], "center")
+      else c("center", c("top", "center", "bottom")[match(align, c(0,.5,1))]))
+  result
 }

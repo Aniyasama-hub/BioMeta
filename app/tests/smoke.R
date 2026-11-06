@@ -3,6 +3,7 @@ args <- commandArgs(trailingOnly = TRUE)
 root <- normalizePath(args[1], winslash = "/", mustWork = TRUE)
 source(file.path(root, "R", "toolbox.R"), encoding = "UTF-8")
 source(file.path(root, "R", "toolbox_analysis.R"), encoding = "UTF-8")
+source(file.path(root, "R", "toolbox_render.R"), encoding = "UTF-8")
 source(file.path(root, "R", "network_import.R"), encoding = "UTF-8")
 engine <- tb_engine(root)
 directory <- file.path(root, "tests", "_output")
@@ -83,7 +84,7 @@ spec <- tb_normalize_spec(list(tool = "circos", inputs = list(
   features = file.path(root, "examples", "circos_features.csv"), links = file.path(root, "examples", "circos_links.csv")), style = style), root)
 output <- file.path(directory, "circos")
 dir.create(output, showWarnings = FALSE)
-tb_save_circos(spec, output, engine)
+tb_render_circos(tb_prepare_circos(spec, output, engine), spec$style, output)
 cat("PASS Circos tracks / links / export\n")
 
 for (id in tb_tool_catalog()$id) {

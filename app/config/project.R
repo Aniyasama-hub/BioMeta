@@ -1,17 +1,17 @@
 # 所有相对路径相对于本配置文件；源文件只读，结果另存。
-# 先用已有小鼠整数 Count 接通下游；FASTQ 定量完成后切换 mode="salmon"。
+# 先配置物种、分组和输入文件，再运行分析。
 config <- list(
-  project = list(id = "mouse_polarization", species = "Mus_musculus",
+  project = list(id = "rnaseq_workbench", species = "Mus_musculus",
                  output = "../../results/cli", max_samples = 30L),
   input = list(
     mode = "counts", samples = "samples.csv",
-    counts = "../../data/gene_count.csv",
+    counts = "../../inputs/counts.csv",
     genes = NULL, gene_id_col = "gene_id", gene_name_col = "gene_name",
     salmon_dir = "../data/salmon", tx2gene = "../references/tx2gene.csv",
     reference_manifest = "../references/reference_manifest.json"
   ),
   analysis = list(
-    condition_levels = c("M2", "HA@CuPB"), # 保留原分组名；对照在前。
+    condition_levels = c("Control", "Treatment"), # 保留原分组名；对照在前。
     use_batch = FALSE,                 # 至少两个技术批次时启用；不把时间点当批次。
     covariates = character(0),         # 如 "timepoint"；必须与样本表列名一致。
     min_count = 10L,                   # 原始 Count 下限，调高可去除弱表达基因。
@@ -26,7 +26,7 @@ config <- list(
     shrink = "none",                  # none/normal；收缩另存，不覆盖原始 log2FC。
     seed = 1L
   ),
-  contrast = list(numerator = "HA@CuPB", denominator = "M2"), # 正值为HA@CuPB高。
+  contrast = list(numerator = "Treatment", denominator = "Control"), # 正值为Treatment高。
   selection = list(
     padj_cutoff = 0.05, log2fc_cutoff = 1, # FDR<0.05 且 |log2FC|>=1，即至少两倍。
     direction = "all",                  # all/up/down；共享于DEG、热图及ORA。
@@ -54,7 +54,7 @@ config <- list(
   style = list(
     palette = c("#7897B8", "#D99A9F", "#A9B8A5", "#B4A6BC",
                 "#D8C5A5", "#9FB8B6", "#C7B5A8", "#ADB2BE"),
-    group_colors = c(M2 = "#7897B8", "HA@CuPB" = "#D99A9F"), # 莫兰迪蓝灰/豆沙。
+    group_colors = c(Control = "#7897B8", "Treatment" = "#D99A9F"), # 莫兰迪蓝灰/豆沙。
     colors = c(Up = "#D99A9F", Down = "#7897B8", Not_significant = "#BEBBBA"),
     low = "#7897B8", mid = "#F3F0EB", high = "#D99A9F",
     width = 10, height = 8,              # 画布尺寸，单位英寸；字挤时优先增大画布。

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PPI 网络分析算法说明</title>
+<style>
+body{margin:0;background:#faf8f2;color:#242c29;font:16px/1.65 system-ui,sans-serif}
+main{max-width:850px;margin:auto;padding:24px}
+article{background:#fffdf8;border:1px solid #d6d1c5;padding:0 18px 16px;margin:14px 0}
+article:target{border:2px solid #3b5148;scroll-margin-top:15px}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f0ece2;padding:12px}
+a{color:#275c4d}nav ul{columns:2;padding-left:24px}
+@media(max-width:550px){nav ul{columns:1}}
+</style></head>
+<body><main>
+<h1>PPI 网络分析算法说明</h1>
+<p>群集算法把蛋白分组，枢纽指标给单个蛋白打分。这里的网络是无向的。公式中的边权表示互作分数，度表示直接相邻的蛋白数。</p>
+<nav aria-label="算法目录"><ul id="contents"></ul></nav>
+<section id="communities"><h2>群集算法</h2></section>
+<section id="hubs"><h2>枢纽指标</h2></section>
+</main>
+<script src="ppi-methods.js"></script>
+<script>
+const hubs = new Set(['degree', 'ncc', 'mnc', 'dmnc', 'mcc', 'clustering',
+  'coreness', 'pagerank', 'betweenness', 'harmonic']);
+const element = (tag, text) => {
+  const node = document.createElement(tag);
+  node.textContent = text;
+  return node;
+};
+for (const [id, [name, description, formula, scope, url]] of Object.entries(ppiMethods)) {
+  const article = element('article', '');
+  article.id = id;
+  const source = element('a', '方法参考 ↗');
+  source.href = url;
+  source.target = '_blank';
+  source.rel = 'noopener';
+  article.append(element('h3', name), element('p', description), element('pre', formula),
+    element('h4', '适用范围'), element('p', scope), source);
+  document.getElementById(hubs.has(id) ? 'hubs' : 'communities').append(article);
+  const link = element('a', name);
+  link.href = '#' + id;
+  const item = element('li', '');
+  item.append(link);
+  document.getElementById('contents').append(item);
+}
+document.getElementById(location.hash.slice(1))?.scrollIntoView();
+</script></body></html>

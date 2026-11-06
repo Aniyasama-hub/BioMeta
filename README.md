@@ -1,35 +1,25 @@
-# BioWorkbench 独立工作台
+# BioWorkbench · 转录组分析工作站
 
-[操作指南](操作指南.md) · [项目介绍](介绍.md)
+BioWorkbench 是面向人和小鼠 Bulk RNA-seq 的本地分析与科研绘图工作站。通过浏览器配置输入、运行 R 分析、审阅结果并导出图表。既可从 Count 和分组开始，也可直接导入已有的差异表达结果、归一化矩阵或网络节点与边。
 
-双击本文件夹的 **Start.cmd** 或 **启动工作台** 快捷方式。
+[操作指南](操作指南.md) · [项目介绍与适用范围](介绍.md) · [版本记录](CHANGELOG.md) · [第三方组件](app/THIRD_PARTY_NOTICES.md)
 
-浏览器将打开本机界面，默认地址为 `http://127.0.0.1:7878`。端口被占用时会自动选择后续空闲端口，以启动窗口显示的地址为准。保持启动窗口打开；按 Ctrl+C 停止服务。
+## 启动
 
-本程序、计算脚本、输入副本与输出均放在此独立文件夹内，不再读取或写入“冯怡pro”项目。R 运行环境使用本机已安装且依赖完整的 `D:\R\R-4.5.1`；运行还需要相应的 R 包；换电脑后需准备 R 环境、依赖与输入文件。
+1. 下载并解压源码。安装 Windows 版 R（本版在 R 4.5.1 上验证）以及所需 R 和 Bioconductor 软件包。
+2. 双击 **Start.cmd**。启动器会查找 PATH 或 Windows 注册表中的 R。也可运行下面的 PowerShell 命令显式指定 Rscript。
+3. 打开启动窗口显示的本机地址，默认端口为 7878。保持启动窗口开启。
 
-```text
-BioWorkbench/
-  Start.cmd             双击入口
-  launch.ps1            兼容 Windows PowerShell 5.1 的启动器
-  app/                  前端、R 后端、配置和绘图示例
-  legacy/               本程序独立使用的热图脚本副本
-  data/                 当前项目输入数据的副本
-  logs/                 启动日志
-```
+~~~powershell
+.\launch.ps1 -Rscript '<R 安装目录>\bin\Rscript.exe'
+~~~
 
-进入界面不会自动分析。默认 Count、分组、差异表和手工注释均使用 data 内的副本。新的分析结果保存在 `app/results/toolbox`，不会影响原项目。
+已安装的依赖可在工作站系统设置中查看，也可执行 `Rscript app/tools/dependencies.R`。功能所需包按模块使用，公共参考库按工具与物种配置。
 
-启动失败会保留错误窗口，并将详情写入 `logs/startup-时间.log`。PowerShell 启动方式：
+## 核心功能
 
-```powershell
-.\launch.ps1
-.\launch.ps1 -Port 7890
-.\launch.ps1 -Rscript 'D:\R\R-4.5.1\bin\Rscript.exe'
-```
+- Bulk RNA-seq 分步审核，以及独立的 PCA、差异表达、火山图和热图。
+- GO／KEGG 过度代表分析、GSEA、GSVA、免疫相关基因集评分，以及 PPI 数据准备和独立网络编辑器。
+- 通用科学绘图、科研组图排版、任务历史和结构化输入错误提示。多数图形可从已有结果重新绘制，导出格式按工具提供。
 
-功能和输入格式详见 [操作说明](app/docs/toolbox.md)。Git 仅保存程序与示例，不提交 data 中的科研输入、运行日志或结果。
-
-本版使用图型专属样式与悬浮说明，PPI 支持 Node / Edge 双上传和离线交互图。[改版检查记录](app/docs/validation-2026-11-05.md)列出已完成验证及未重跑的真实分析范围；[第三方说明](app/THIRD_PARTY_NOTICES.md)记录 MIT 代码与许可证。
-
-首版基线 v0.1.0：[版本记录](CHANGELOG.md) · [发布前检查](app/docs/release-review.md)。发布前新增 15 条合成后台任务检查，覆盖 14 个工具与 PPI 两种模式。
+源码包包含程序、合成示例、测试和说明。用户输入、任务记录、缓存、公共参考库副本和运行结果保存在本机。KEGG、Reactome 等公共参考的获取可能需要联网。工作站用于本地科研探索及图表制作，具体输入和解释边界见[适用范围](介绍.md)。

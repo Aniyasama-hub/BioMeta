@@ -36,7 +36,7 @@ load_config <- function(path) {
   for (name in c("gmt", "ppi_edges")) {
     cfg$pathways[[name]] <- absolute_path(cfg$pathways[[name]], base)
   }
-  if (cfg$project$species != "Mus_musculus") stop("首版只接收明确声明的小鼠数据。")
+  if (length(cfg$project$species) != 1L || is.na(cfg$project$species) || !nzchar(cfg$project$species)) stop("请声明物种。")
   if (!cfg$input$mode %in% c("counts", "salmon")) stop("input$mode须为counts或salmon。")
   if (!cfg$selection$direction %in% c("all", "up", "down")) stop("direction须为all/up/down。")
   if (cfg$selection$padj_cutoff <= 0 || cfg$selection$padj_cutoff > 1 ||
@@ -59,8 +59,8 @@ read_samples <- function(cfg) {
   if (any(!toupper(samples$include) %in% c("TRUE", "FALSE"))) stop("include只能为TRUE/FALSE。")
   samples <- samples[toupper(samples$include) == "TRUE", , drop = FALSE]
   if (!"source_sample_id" %in% names(samples)) samples$source_sample_id <- samples$sample_id
-  if (nrow(samples) < 3 || nrow(samples) > min(30L, cfg$project$max_samples)) {
-    stop("首版要求3~30个纳入样本，并有足够残差自由度。")
+  if (nrow(samples) < 3 || nrow(samples) > cfg$project$max_samples) {
+    stop("纳入样本须在 3 到 ", cfg$project$max_samples, " 个之间，并有足够残差自由度。")
   }
   if (cfg$analysis$min_samples > nrow(samples)) stop("min_samples不能超过入组样本数。")
   if (anyDuplicated(samples$sample_id) ||

@@ -6,15 +6,52 @@ choose_expression <- function(analysis, selection) {
 }
 
 compute_distance <- function(matrix, method) {
-  if (method == "euclidean") return(stats::dist(matrix))
-  if (method != "pearson") stop("distance只支持pearson/euclidean。")
-  correlation <- stats::cor(t(matrix), method = "pearson")
+  if (method %in% c("euclidean", "manhattan")) return(stats::dist(matrix, method = method))
+  if (!method %in% c("pearson", "spearman")) stop("不支持的聚类距离。")
+  correlation <- stats::cor(t(matrix), method = method)
   if (any(!is.finite(correlation))) stop("相关距离遇到常数向量，请换欧氏距离。")
   stats::as.dist(pmax(1 - correlation, 0))
 }
 
+heatmap_bad_gene <- function(x) {
+  x <- trimws(as.character(x))
+  date <- grepl("^(?:[0-9]{1,4}[-/.][0-9]{1,2}[-/.][0-9]{1,4}|[0-9]{1,2}[-/](?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-/][0-9]{1,2})(?:$|[ T])",
+    x, ignore.case = TRUE, perl = TRUE)
+  opaque <- grepl("^[0-9]{13,}$|^[[:xdigit:]]{24,}$|^[A-Za-z0-9]{48,}$|^[0-9]+([.][0-9]+)?[Ee][+-][0-9]+$|^https?://", x, ignore.case = TRUE)
+  invalid <- !grepl("^[A-Za-z0-9][A-Za-z0-9_.:+/*-]{0,63}$", x)
+  !is.na(x) & nzchar(x) & (date | opaque | invalid)
+}
+
+heatmap_gene_exclusions <- function(ids, labels) {
+  bad <- heatmap_bad_gene(ids) | heatmap_bad_gene(labels)
+  data.frame(gene_id = ids[bad], gene_name = labels[bad], reason = rep("invalid_gene_annotation", sum(bad)))
+}
+
+heatmap_column_plan <- function(matrix, samples, selection) {
+  groups <- samples$condition
+  if (!is.null(groups) && (anyNA(groups) || any(!nzchar(trimws(as.character(groups)))))) stop("热图样本分组不能为空。")
+  if (is.null(groups) || identical(selection$column_cluster_mode, "global")) {
+    blocks <- list(seq_len(ncol(matrix)))
+  } else {
+    levels <- if (is.factor(groups)) levels(droplevels(groups)) else unique(groups)
+    blocks <- split(seq_len(ncol(matrix)), factor(groups, levels = levels))
+  }
+  order <- function(ids) {
+    if (!isTRUE(selection$cluster_columns) || length(ids) < 2L) return(ids)
+    tree <- stats::hclust(compute_distance(t(matrix[, ids, drop = FALSE]), selection$distance),
+      method = selection$linkage)
+    ids[tree$order]
+  }
+  unlist(lapply(blocks, order), use.names = FALSE)
+}
+
+
 prepare_heatmap <- function(analysis, selection) {
   expression <- choose_expression(analysis, selection)
+  genes <- analysis$genes
+  excluded <- if (!identical(selection$sanitize_genes, FALSE)) heatmap_gene_exclusions(genes$gene_id, genes$gene_name)
+    else heatmap_gene_exclusions(character(), character())
+  expression <- expression[!rownames(expression) %in% excluded$gene_id, , drop = FALSE]
   match_report <- data.frame()
   if (selection$heatmap_mode == "custom") {
     targets <- read_table(selection$target_genes)
@@ -39,36 +76,36 @@ prepare_heatmap <- function(analysis, selection) {
     # 不把同名稳定ID自动相加；多重命中明确保留在匹配报告。
   } else if (selection$heatmap_mode == "deg") {
     selected <- analysis$deg[selection_mask(analysis$deg, selection), , drop = FALSE]
+    selected <- selected[selected$gene_id %in% rownames(expression), , drop = FALSE]
     selected <- selected[order(selected$padj, -abs(selected[[selection$lfc_column]]),
                                 selected$gene_id), , drop = FALSE]
     ids <- head(selected$gene_id, selection$heatmap_top_n)
   } else if (selection$heatmap_mode == "variable") {
+    if (!nrow(expression)) stop("剔除异常基因注释后没有可绘制的基因。")
     variances <- apply(expression, 1, stats::var)
     ids <- head(names(sort(variances, decreasing = TRUE)), selection$heatmap_top_n)
   } else stop("heatmap_mode须为deg/variable/custom。")
   matrix <- expression[intersect(ids, rownames(expression)), , drop = FALSE]
   if (!nrow(matrix)) stop("没有可绘制基因；完整分析已保留，请检查筛选或基因匹配报告。")
   constant <- apply(matrix, 1, stats::sd) == 0
-  excluded <- data.frame(gene_id = rownames(matrix)[constant], reason = rep("zero_variance", sum(constant)))
+  excluded <- rbind(excluded, data.frame(gene_id = rownames(matrix)[constant],
+    gene_name = genes$gene_name[match(rownames(matrix)[constant], genes$gene_id)], reason = rep("zero_variance", sum(constant))))
   matrix <- matrix[!constant, , drop = FALSE]
   if (!nrow(matrix)) stop("所选基因全部无样本间变异。")
   before_scale <- matrix
   if (selection$row_zscore) matrix <- t(scale(t(matrix)))
   # 保存未截断Z-score；颜色范围只由style控制，避免永久丢失极值。
-  row_tree <- column_tree <- NULL
+  row_tree <- NULL
   if (selection$linkage == "ward.D2" && selection$distance != "euclidean") {
     stop("ward.D2须搭配euclidean距离。")
   }
   if (selection$cluster_rows && nrow(matrix) > 1) {
     row_tree <- stats::hclust(compute_distance(matrix, selection$distance), method = selection$linkage)
   }
-  if (selection$cluster_columns && ncol(matrix) > 1) {
-    column_tree <- stats::hclust(compute_distance(t(matrix), selection$distance), method = selection$linkage)
-  }
   row_order <- if (is.null(row_tree)) seq_len(nrow(matrix)) else row_tree$order
-  column_order <- if (is.null(column_tree)) seq_len(ncol(matrix)) else column_tree$order
   sample_annotation <- analysis$samples[colnames(matrix), c("condition", "batch"), drop = FALSE]
-  row_labels <- analysis$genes[rownames(matrix), "gene_name"]
+  column_order <- heatmap_column_plan(matrix, sample_annotation, selection)
+  row_labels <- as.character(genes$gene_name[match(rownames(matrix), genes$gene_id)])
   row_labels[is.na(row_labels) | row_labels == ""] <- rownames(matrix)[is.na(row_labels) | row_labels == ""]
   row_annotation <- NULL
   if (selection$heatmap_mode == "custom" && "Pathway" %in% names(targets)) {
@@ -80,7 +117,7 @@ prepare_heatmap <- function(analysis, selection) {
   list(type = "heatmap", data = matrix,
        extras = list(matrix_units = if (selection$row_zscore) "row_zscore" else "VST",
                      expression_before_scale = before_scale, row_order = row_order,
-                     column_order = column_order, row_tree = row_tree, column_tree = column_tree,
+                     column_order = column_order, row_tree = row_tree,
                      row_labels = row_labels, row_annotation = row_annotation,
                      sample_annotation = sample_annotation, gene_match_report = match_report,
                      excluded_genes = excluded))
@@ -90,6 +127,7 @@ prepare_bundle <- function(analysis, cfg, type, pathways = NULL) {
   selection <- cfg$selection
   if (type == "pca") {
     expression <- choose_expression(analysis, selection)
+    if (!nrow(expression)) stop("剔除异常基因注释后没有可绘制的基因。")
     variances <- apply(expression, 1, stats::var)
     ids <- head(names(sort(variances[variances > 0], decreasing = TRUE)), selection$pca_top_genes)
     if (length(ids) < 2) stop("PCA至少需要两个非恒定基因。")
@@ -128,34 +166,53 @@ prepare_bundle <- function(analysis, cfg, type, pathways = NULL) {
   if (type == "enrichment") {
     table <- pathways$ora$results
     if (is.null(table)) stop("未运行ORA模块。")
-    table <- table[is.finite(table$p.adjust) & table$p.adjust < cfg$pathways$ora_padj, , drop = FALSE]
-    table <- head(table[order(table$p.adjust, -table$Count), , drop = FALSE], selection$pathway_top_n)
+    table <- table[is.finite(table$p.adjust) & table$p.adjust <= cfg$pathways$ora_padj, , drop = FALSE]
+    terms <- selection$pathway_terms
+    if (length(terms)) table <- table[table$ID %in% terms, , drop = FALSE]
     if (!nrow(table)) stop("没有符合阈值的富集条目；完整富集结果仍已保存。")
     ratio <- vapply(strsplit(table$GeneRatio, "/", fixed = TRUE),
                      function(x) as.numeric(x[1]) / as.numeric(x[2]), numeric(1))
-    return(list(type = "enrichment",
-                 data = data.frame(term_id = table$ID, description = table$Description,
-                                    padj = table$p.adjust, gene_ratio = ratio, count = table$Count,
-                                    source = cfg$pathways$database_label), extras = list()))
+    data <- data.frame(term_id = table$ID, description = table$Description,
+      padj = table$p.adjust, gene_ratio = ratio, count = table$Count, source = cfg$pathways$database_label)
+    if ("ontology" %in% names(table)) data$ontology <- table$ontology
+    data <- data[is.finite(data$gene_ratio), , drop = FALSE]
+    data <- head(data[order(-data$gene_ratio, data$padj, data$term_id), , drop = FALSE], selection$pathway_top_n)
+    if (!nrow(data)) stop("没有可绘制的 Gene ratio。")
+    return(list(type = "enrichment", data = data, extras = list()))
   }
   if (type == "gsea") {
-    table <- pathways$gsea$results
-    if (is.null(table) || !nrow(table)) stop("GSEA无可展示结果。")
-    id <- selection$pathway_id %||% table$pathway[order(table$padj, -abs(table$NES))][1]
-    row <- table[table$pathway == id, , drop = FALSE]
-    if (nrow(row) != 1) stop("pathway_id未唯一匹配GSEA结果。")
-    stats <- pathways$gsea$ranked_stats
-    hit <- names(stats) %in% pathways$gsea$pathways[[id]]
+    result <- pathways$gsea
+    table <- result$results
+    if (is.null(table) || !nrow(table)) stop("所选数据库没有可展示的 GSEA 通路。")
+    table <- table[.gsea_order(table, selection), , drop = FALSE]
+    metric <- selection$gsea_sort %||% "padj"
+    if (!is.null(selection$pathway_id)) {
+      table <- table[table$pathway == selection$pathway_id, , drop = FALSE]
+      if (!nrow(table)) stop("指定通路 ID 未匹配所选数据库的 GSEA 结果。")
+    }
+    table <- head(table[is.finite(table[[metric]]) & is.finite(table$NES), , drop = FALSE], selection$pathway_top_n)
+    if (!nrow(table)) stop("没有可按所选指标排序的通路。")
+    stats <- result$ranked_stats
     weights <- abs(stats)
-    total <- sum(weights[hit])
-    if (!any(hit) || all(hit) || total == 0) stop("该基因集无法构建有效运行曲线。")
-    running <- cumsum(ifelse(hit, weights / total, -1 / sum(!hit)))
-    data <- data.frame(rank = seq_along(stats), gene = names(stats),
-                       running_es = running, hit = hit, rank_score = unname(stats))
-    return(list(type = "gsea", data = data,
-                 extras = list(pathway_id = id, nes = row$NES, padj = row$padj,
-                               weighting_exponent = 1)))
+    index <- data.frame(folder = sprintf("gsea-%03d", seq_len(nrow(table))),
+      pathway_id = table$pathway, pathway_name = table$description %||% table$pathway,
+      NES = table$NES, pvalue = table$pval, FDR = table$padj,
+      database = cfg$pathways$database_label)
+    curves <- lapply(seq_len(nrow(index)), function(i) {
+      id <- index$pathway_id[i]
+      hit <- names(stats) %in% result$pathways[[id]]
+      if (!any(hit) || all(hit)) stop("基因集无法构建有效运行曲线：", id)
+      total <- sum(weights[hit])
+      increments <- if (total > 0) weights / total else rep(1 / sum(hit), length(hit))
+      data <- data.frame(rank = seq_along(stats), gene = names(stats),
+        running_es = cumsum(ifelse(hit, increments, -1 / sum(!hit))), hit = hit, rank_score = unname(stats))
+      list(type = "gsea", data = data, extras = list(pathway_id = id, pathway_name = index$pathway_name[i],
+        database = index$database[i], nes = index$NES[i], padj = index$FDR[i], pvalue = index$pvalue[i],
+        weighting_exponent = 1))
+    })
+    return(list(type = "gsea_collection", curves = stats::setNames(curves, index$folder), index = index))
   }
+
   if (type == "network") {
     if (is.null(pathways$ppi) || !nrow(pathways$ppi$nodes)) stop("PPI无可展示节点。")
     return(list(type = "network", data = pathways$ppi$nodes,
@@ -164,6 +221,9 @@ prepare_bundle <- function(analysis, cfg, type, pathways = NULL) {
   if (type == "gsva") {
     table <- pathways$gsva$results
     if (is.null(table) || !nrow(table)) stop("GSVA无可展示结果。")
+    terms <- selection$pathway_terms
+    if (length(terms)) table <- table[table$term_id %in% terms, , drop = FALSE]
+    if (!nrow(table)) stop("指定的 GSVA 条目未匹配结果，请核对注释来源、条目 ID 与基因集大小。")
     ids <- head(table$term_id[order(table$adj.P.Val, -abs(table$logFC))], selection$pathway_top_n)
     matrix <- pathways$gsva$scores[ids, , drop = FALSE]
     constant <- apply(matrix, 1, stats::sd) == 0
@@ -171,11 +231,14 @@ prepare_bundle <- function(analysis, cfg, type, pathways = NULL) {
     if (!nrow(matrix)) stop("GSVA所选通路全部恒定。")
     unscaled <- matrix
     if (selection$row_zscore) matrix <- t(scale(t(matrix)))
+    annotation <- analysis$samples[colnames(matrix), c("condition", "batch"), drop = FALSE]
+    row_order <- if (isTRUE(selection$cluster_rows) && nrow(matrix) > 1L)
+      stats::hclust(compute_distance(matrix, selection$distance), method = selection$linkage)$order else seq_len(nrow(matrix))
     return(list(type = "heatmap", data = matrix,
                  extras = list(matrix_units = if (selection$row_zscore) "row_zscore" else "GSVA_score",
                                expression_before_scale = unscaled, row_labels = rownames(matrix),
-                               row_order = seq_len(nrow(matrix)), column_order = seq_len(ncol(matrix)),
-                               sample_annotation = analysis$samples[colnames(matrix), c("condition", "batch")],
+                               row_order = row_order, column_order = heatmap_column_plan(matrix, annotation, selection),
+                               sample_annotation = annotation,
                                statistics = table)))
   }
   stop("未知图型：", type)
@@ -184,6 +247,11 @@ prepare_bundle <- function(analysis, cfg, type, pathways = NULL) {
 export_bundle <- function(bundle, directory) {
   dir.create(directory, recursive = TRUE, showWarnings = FALSE)
   saveRDS(bundle, file.path(directory, "bundle.rds"))
+  if (bundle$type == "gsea_collection") {
+    write_table(bundle$index, file.path(directory, "gsea_plot_index.csv"))
+    for (name in names(bundle$curves)) export_bundle(bundle$curves[[name]], file.path(directory, name))
+    return(invisible(NULL))
+  }
   if (is.matrix(bundle$data)) {
     rows <- bundle$extras$row_order
     columns <- bundle$extras$column_order

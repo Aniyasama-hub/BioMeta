@@ -4,7 +4,7 @@ args <- commandArgs(trailingOnly = TRUE)
 all_args <- commandArgs(trailingOnly = FALSE)
 script <- sub("^--file=", "", all_args[grepl("^--file=", all_args)][1])
 root <- dirname(normalizePath(script, winslash = "/", mustWork = TRUE))
-for (file in c("core.R", "analysis.R", "prepare.R", "pathways.R", "plots.R")) {
+for (file in c("core.R", "analysis.R", "prepare.R", "pathways.R", "ppi_prepare.R", "style_schema.R", "plots.R")) {
   source(file.path(root, "R", file), encoding = "UTF-8")
 }
 if (length(args) %% 2 != 0) stop("参数须为 --名称 值；参见README。")
@@ -40,10 +40,12 @@ render_saved_bundle <- function(path, cfg) {
   dput(cfg$style, file = file.path(directory, "style.R"))
   # 导出的绘图引擎是结果包的复现资产，不是原项目脚本备份。
   file.copy(file.path(root, "R", "plots.R"), file.path(directory, "plot_engine.R"), overwrite = TRUE)
+  file.copy(file.path(root, "R", "style_schema.R"), directory, overwrite = TRUE)
   writeLines(c(
     "args <- commandArgs(trailingOnly = FALSE)",
     "path <- sub('^--file=', '', args[grepl('^--file=', args)][1])",
     "root <- dirname(normalizePath(path, winslash = '/', mustWork = TRUE))",
+    "source(file.path(root, 'style_schema.R'), encoding = 'UTF-8')",
     "source(file.path(root, 'plot_engine.R'), encoding = 'UTF-8')",
     "render_bundle(readRDS(file.path(root, 'bundle.rds')),",
     "              dget(file.path(root, 'style.R')), root)"

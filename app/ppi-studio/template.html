@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PPI 网络编辑器</title>
+<style>
+body{margin:0;background:#faf8f2;color:#242c29;font:13px system-ui,sans-serif}
+header,section,footer{padding:12px 14px;border-bottom:1px solid #d6d1c5}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+header strong{margin-right:auto;font-size:17px}
+details+details{margin-top:10px}
+summary{cursor:pointer;font-weight:650}
+form{display:flex;align-items:end;flex-wrap:wrap;gap:8px;margin:8px 0 0}
+label{display:grid;gap:4px}
+button,select,input{border:1px solid #bab7ab;background:#fffdf8;color:#26342e;padding:6px;border-radius:2px}
+button{cursor:pointer}button:hover{background:#ede7d9}
+input[type=number]{width:76px}input[type=color]{height:29px;padding:2px}
+.canvas-wrap{overflow:auto;max-height:650px}#cy{height:450px;width:100%}
+#clusters{margin:6px 0;max-height:150px;overflow:auto}
+.advanced{height:100dvh;display:grid;grid-template-columns:minmax(280px,330px) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto}
+.advanced header,.advanced footer{grid-column:1/-1}
+.advanced section{overflow:auto;border-right:1px solid #d6d1c5}
+.advanced .canvas-wrap{max-height:none}
+.advanced #cy{height:100%;min-height:240px}
+.palette-preview{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.edit-link{background:#3b5148;color:white;text-decoration:none;padding:6px 10px;border-radius:2px}
+.style-menu{width:max-content;max-width:100%;margin:4px 0}
+.style-menu summary{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;border:1px solid #bab7ab;background:#fffdf8;border-radius:2px}
+.style-menu summary::after{content:'▾'}.style-menu[open] summary::after{content:'▴'}
+.style-options{display:grid;gap:3px;padding:4px;background:#fffdf8;border:1px solid #bab7ab;border-top:0}
+.style-options button{text-align:left}
+.style-options button[aria-pressed=true]{background:#e2e9e4}
+.style-item{display:inline-flex;align-items:center;gap:5px}
+.style-menu-label{display:block;margin-top:8px}
+.section-tip{position:relative;display:inline-block}
+.section-tip [role=tooltip]{display:none;position:absolute;z-index:2;top:100%;left:0;width:min(260px,70vw);padding:7px 9px;background:#26342e;color:white;border-radius:3px;font-weight:400}
+summary:hover .section-tip [role=tooltip],summary:focus-visible .section-tip [role=tooltip]{display:block}
+.shape{width:15px;height:15px;background:#52664d;display:inline-block}
+.shape.ellipse{border-radius:50%}.shape.round-rectangle{width:20px;border-radius:4px}
+.shape.diamond{clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+.shape.triangle{clip-path:polygon(50% 0,100% 100%,0 100%)}
+.shape.hexagon{clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}
+.chip{display:inline-block;width:14px;height:14px;border:1px solid #bab7ab}
+#custom-colors{flex-basis:100%}
+.color-row{display:flex;align-items:center;gap:5px;margin:6px 0}
+.color-row input[type=text]{width:125px}
+.algorithm-help{background:#3b5148;color:white;border-radius:50%;display:inline-grid;place-items:center;width:19px;height:19px;text-decoration:none}
+.help-wrap{position:relative;width:max-content}
+.help-tip{display:none;position:absolute;z-index:1;left:100%;top:0;white-space:nowrap;background:#26342e;color:white;padding:3px 5px}
+.algorithm-help:hover+.help-tip,.algorithm-help:focus-visible+.help-tip{display:block}
+
+[hidden]{display:none!important}
+@media(max-width:700px){.advanced{display:block;height:auto}.advanced #cy{height:55vh}}
+</style></head>
+<body class="__EDITOR_MODE__">
+<header><strong>__EDITOR_TITLE__</strong>__EDITOR_LINK__
+  <label>布局<select id="layout"><option value="preset">保持位置</option><option value="circle">圆形</option><option value="grid">网格</option><option value="cose">力导向</option></select></label>
+  <button id="fit">适应画布</button><button id="labels" type="button">显示全部标签</button><button id="png">导出当前视图 PNG</button>
+</header>
+<section>
+  <div class="style-menu-label">全局风格</div>
+  <details class="style-menu" id="theme-menu">
+      <summary aria-label="全局风格"><span id="theme-current"></span></summary>
+      <div class="style-options" id="theme-options"></div>
+    </details>
+  <details open><summary>画布与节点样式</summary>
+    <form id="size-form">
+      <label>画布宽度（px）<input type="number" id="canvas-width" min="320" max="2400" value="800" required></label>
+      <label>画布高度（px）<input type="number" id="canvas-height" min="240" max="1800" value="450" required></label>
+      <button id="resize" type="button">设置尺寸</button>
+    </form>
+    <form id="spacing-form">
+      <label>节点间距<input type="range" id="spacing" min="10" max="500" value="100"></label>
+      <label>比例（%）<input type="number" id="spacing-value" min="10" max="500" step="any" value="100" required></label>
+      <button type="submit">应用比例</button>
+    </form>
+    <form id="node-form">
+      <div>节点风格
+        <details class="style-menu" id="node-style-menu">
+      <summary aria-label="节点风格"><span id="node-style-current"></span></summary>
+      <div class="style-options" id="node-style-options"></div>
+    </details>
+      </div>
+
+      <label>应用范围<select id="style-scope"><option value="visible">当前可见节点</option><option value="selected">选中节点</option></select></label>
+      <label>大小（px）<input type="number" id="node-size" min="4" max="120" value="28" required></label>
+      <label>填色<input type="color" id="node-color" value="#52664d"></label>
+      <button id="apply-style" type="button">应用节点样式</button>
+      <button id="reset-style" type="button">重置</button>
+    </form>
+  </details>
+  <details open><summary aria-describedby="palette-tip"><span class="section-tip">配色方案
+    <span id="palette-tip" role="tooltip">预设色卡依次显示节点、画布和连线。自定义颜色按节点度从低到高分段，并应用到选定的节点范围。</span>
+  </span></summary>
+    <details class="style-menu" id="palette-menu">
+      <summary aria-label="预设配色"><span id="palette-current"></span></summary>
+      <div class="style-options" id="palette-options"></div>
+    </details>
+    <div id="palette-preview" class="palette-preview" aria-live="polite" hidden></div>
+    <form id="custom-palette">
+      <label>自定义色数<select id="palette-count">
+        <option value="1">单色</option><option value="2">双色</option><option value="3">三色</option><option value="4">多色</option>
+      </select></label>
+      <button id="add-color" type="button" hidden>增加一色</button>
+      <button id="remove-color" type="button" hidden>减少一色</button>
+      <div id="custom-colors"></div>
+      <button type="submit">应用自定义配色</button>
+    </form>
+  </details>
+  <details open><summary aria-describedby="edge-tip"><span class="section-tip">连线样式
+    <span id="edge-tip" role="tooltip">箭头指向边表的目标端，仅用于显示。参数虚线按所选数值等比设置线宽，最低为 0.5 px。线宽倍率适用于全部线型。</span>
+  </span></summary>
+    <form id="edge-form">
+      <label>线型<select id="edge-style">
+        <option value="">原始线型</option><option value="arrow">箭头</option>
+        <option value="thin">细实线</option><option value="thick">粗实线</option>
+        <option value="dashed">虚线</option><option value="scaled">按参数缩放的虚线</option>
+      </select></label>
+      <label id="edge-metric-label" hidden>线宽参数<select id="edge-metric">
+        <option value="degree">两端节点平均度</option><option value="score">互作分数</option>
+      </select></label>
+      <label>线宽倍率<input id="edge-width" type="number" min="0.1" max="10" step="any" value="1" required></label>
+      <label>颜色<input id="edge-color" type="color" value="#999999"></label>
+      <label>不透明度（%）<input id="edge-opacity" type="number" min="0" max="100" step="any" required></label>
+    </form>
+  </details>
+__ADVANCED_TOOLS__
+</section>
+<div class="canvas-wrap"><div id="cy"></div></div>
+<footer id="detail" aria-live="polite">单击选择节点，可拖动节点和滚动缩放画布。</footer>
+<script type="application/json" id="network-data">__NETWORK_DATA__</script>
+<script src="cytoscape.min.js"></script><script src="network-editor.js"></script>__ADVANCED_SCRIPTS__
+</body></html>

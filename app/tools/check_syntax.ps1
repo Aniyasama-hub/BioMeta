@@ -1,5 +1,5 @@
 param(
-    [string]$Rscript = 'D:\R\R-4.5.1\bin\Rscript.exe',
+    [string]$Rscript = 'Rscript.exe',
     [string]$Python = 'python'
 )
 # 只解析源码；不source脚本、不调用分析、不生成科研结果。

@@ -97,19 +97,7 @@ analyze_dataset <- function(cfg, samples, output_dir, fingerprint) {
   }
   dds <- DESeq2::DESeq(dds, fitType = cfg$analysis$fit_type,
                       sfType = cfg$analysis$size_factor_type, parallel = FALSE)
-  contrast <- c("condition", cfg$contrast$numerator, cfg$contrast$denominator)
-  results <- DESeq2::results(dds, contrast = contrast, alpha = cfg$analysis$alpha,
-                             independentFiltering = cfg$analysis$independent_filtering,
-                             cooksCutoff = cfg$analysis$cooks_cutoff)
-  deg <- data.frame(gene_id = rownames(results), as.data.frame(results), row.names = NULL)
-  deg$gene_name <- imported$genes[deg$gene_id, "gene_name"]
-  # 收缩估计单独保存；默认不改变DEG阈值所用原始log2FC。
-  if (cfg$analysis$shrink == "normal") {
-    shrunken <- DESeq2::lfcShrink(dds, contrast = contrast, res = results, type = "normal")
-    deg$log2FC_shrunken <- shrunken$log2FoldChange
-  } else if (cfg$analysis$shrink != "none") stop("shrink只支持none/normal。")
-  deg$result_status <- ifelse(is.na(deg$pvalue), "pvalue_NA_outlier_or_unestimable",
-                              ifelse(is.na(deg$padj), "padj_NA_independent_filter", "tested"))
+  deg <- extract_degs(dds, imported$genes, cfg)
   # varianceStabilizingTransformation在少基因数据上也适用；避免vst的nsub限制。
   transformed <- DESeq2::varianceStabilizingTransformation(dds, blind = cfg$analysis$vst_blind)
   vst <- SummarizedExperiment::assay(transformed)
@@ -155,4 +143,21 @@ analyze_dataset <- function(cfg, samples, output_dir, fingerprint) {
                          check.names = FALSE), file.path(output_dir, "sample_correlations.csv"))
   saveRDS(result, file.path(output_dir, "analysis.rds"))
   result
+}
+
+extract_degs <- function(dds, genes, cfg) {
+  contrast <- c("condition", cfg$contrast$numerator, cfg$contrast$denominator)
+  results <- DESeq2::results(dds, contrast = contrast, alpha = cfg$analysis$alpha,
+                             independentFiltering = cfg$analysis$independent_filtering,
+                             cooksCutoff = cfg$analysis$cooks_cutoff)
+  deg <- data.frame(gene_id = rownames(results), as.data.frame(results), row.names = NULL)
+  deg$gene_name <- genes[deg$gene_id, "gene_name"]
+  # 收缩估计单独保存；默认不改变DEG阈值所用原始log2FC。
+  if (cfg$analysis$shrink == "normal") {
+    shrunken <- DESeq2::lfcShrink(dds, contrast = contrast, res = results, type = "normal")
+    deg$log2FC_shrunken <- shrunken$log2FoldChange
+  } else if (cfg$analysis$shrink != "none") stop("shrink只支持none/normal。")
+  deg$result_status <- ifelse(is.na(deg$pvalue), "pvalue_NA_outlier_or_unestimable",
+                              ifelse(is.na(deg$padj), "padj_NA_independent_filter", "tested"))
+  deg
 }

@@ -62,8 +62,9 @@
   gene_map <- unique(genes[c("gene_id", "gene_name")])
   joined$mapped_name <- gene_map$gene_name[match(joined$gene_id, gene_map$gene_id)]
   if (id_type == "gene_id") joined$rank_id <- joined$gene_id else joined$rank_id <- joined$mapped_name
-  joined <- joined[!is.na(joined$rank_id) & nzchar(joined$rank_id) &
-                     is.finite(joined$stat) & is.finite(joined$pvalue), , drop = FALSE]
+  valid <- is.finite(joined$stat)
+  if ("pvalue" %in% names(joined)) valid <- valid & is.finite(joined$pvalue)
+  joined <- joined[!is.na(joined$rank_id) & nzchar(joined$rank_id) & valid, , drop = FALSE]
   joined <- joined[order(-abs(joined$stat), joined$rank_id, joined$gene_id), , drop = FALSE]
   joined <- joined[!duplicated(joined$rank_id), , drop = FALSE]
   stats <- stats::setNames(joined$stat, joined$rank_id)
@@ -77,8 +78,8 @@
 }
 
 # 在分析 ID 空间内运行 ORA，clusterProfiler 仅用于完整统计，不提前截断显著性。
-.run_ora <- function(deg, genes, gmt, cfg, output_dir) {
-  tested <- is.finite(deg$stat) & is.finite(deg$pvalue)
+.ora_statistics <- function(deg, genes, gmt, cfg) {
+  tested <- if ("pvalue" %in% names(deg)) is.finite(deg$pvalue) else is.finite(deg$padj)
   tested_deg <- deg[tested, , drop = FALSE]
   selected <- tested_deg$gene_id[selection_mask(tested_deg, cfg$selection)]
   ids_to_gmt <- function(ids) {
@@ -113,10 +114,45 @@
   if (nrow(table) && "p.adjust" %in% names(table)) {
     table$significant <- !is.na(table$p.adjust) & table$p.adjust <= cfg$pathways$ora_padj
   }
-  .write_pathway_table(table, file.path(output_dir, "ora_results.csv"))
-  .write_pathway_table(data.frame(gmt_id = universe), file.path(output_dir, "ora_tested_universe.csv"))
-  .write_pathway_table(data.frame(gmt_id = selected), file.path(output_dir, "ora_selected_genes.csv"))
   list(results = table, universe = universe, selected = selected)
+}
+
+.run_ora <- function(deg, genes, gmt, cfg, output_dir) {
+  mapping <- cfg$pathways$go_term_ontology
+  if (length(mapping)) {
+    parts <- lapply(split(names(mapping), unname(mapping)), function(ids) {
+      subset <- list(term2gene = gmt$term2gene[gmt$term2gene$term_id %in% ids, , drop = FALSE],
+        term2name = gmt$term2name[gmt$term2name$term_id %in% ids, , drop = FALSE])
+      .ora_statistics(deg, genes, subset, cfg)
+    })
+    result <- list(results = do.call(rbind, lapply(names(parts), function(category) {
+      rows <- parts[[category]]$results
+      rows$ontology <- rep(category, nrow(rows))
+      rows
+    })))
+    for (item in c("universe", "selected")) {
+      result[[item]] <- unique(unlist(lapply(parts, `[[`, item), use.names = FALSE))
+      rows <- do.call(rbind, lapply(names(parts), function(category) {
+        ids <- parts[[category]][[item]]
+        data.frame(gmt_id = ids, ontology = rep(category, length(ids)))
+      }))
+      name <- if (item == "universe") "ora_tested_universe.csv" else "ora_selected_genes.csv"
+      .write_pathway_table(rows, file.path(output_dir, name))
+    }
+  } else {
+    result <- .ora_statistics(deg, genes, gmt, cfg)
+    .write_pathway_table(data.frame(gmt_id = result$universe), file.path(output_dir, "ora_tested_universe.csv"))
+    .write_pathway_table(data.frame(gmt_id = result$selected), file.path(output_dir, "ora_selected_genes.csv"))
+  }
+  .write_pathway_table(result$results, file.path(output_dir, "ora_results.csv"))
+  result
+}
+
+# Sort the full results and the curve selection consistently. Missing values always come last.
+.gsea_order <- function(table, selection) {
+  metric <- table[[selection$gsea_sort %||% "padj"]]
+  if (identical(selection$gsea_order, "desc")) metric <- -metric
+  order(metric, -abs(table$NES), table$pathway, na.last = TRUE)
 }
 
 # fgsea 使用未按 DEG 阈值预筛的完整有效 stat 排序列表。
@@ -139,6 +175,10 @@
     NES = numeric(), size = integer(), leadingEdge = I(list()), padj = numeric()
   )
   if (nrow(result)) result$significant <- !is.na(result$padj) & result$padj <= cfg$pathways$gsea_padj
+  result$description <- gmt$term2name$description[match(result$pathway, gmt$term2name$term_id)]
+  missing <- is.na(result$description) | !nzchar(result$description)
+  result$description[missing] <- result$pathway[missing]
+  result <- result[.gsea_order(result, cfg$selection), , drop = FALSE]
   output_table <- result
   if ("leadingEdge" %in% names(output_table)) {
     output_table$leadingEdge <- vapply(output_table$leadingEdge, paste, collapse = ";", character(1))
@@ -227,61 +267,14 @@
   list(scores = scores, results = results, design = design)
 }
 
-# 只使用本地 STRING 风格边表，并为显著差异基因生成可复现布局坐标。
-.run_ppi <- function(deg, cfg, output_dir) {
-  edges_path <- cfg$pathways$ppi_edges
-  if (is.null(edges_path) || !file.exists(edges_path)) stop("启用 PPI 时需提供本地 cfg$pathways$ppi_edges CSV。", call. = FALSE)
-  edges <- read_table(edges_path)
-  required <- c("from", "to", "score")
-  if (!all(required %in% names(edges))) stop("PPI CSV 需包含 from、to、score 列。", call. = FALSE)
-  edges$score <- as.numeric(edges$score)
-  if (any(!is.finite(edges$score) | edges$score < 0 | edges$score > 1)) {
-    stop("PPI score 必须是 [0,1] 内的有限数值。", call. = FALSE)
-  }
-  edges <- edges[edges$score >= cfg$pathways$ppi_score & edges$from != edges$to, , drop = FALSE]
-  # 同一无向边重复出现时保留最高置信度，避免结果取决于输入行顺序。
-  edges <- edges[order(edges$score, decreasing = TRUE), , drop = FALSE]
-  edge_key <- vapply(seq_len(nrow(edges)), function(i) paste(sort(c(edges$from[[i]], edges$to[[i]])), collapse = "\r"), character(1))
-  edges <- edges[!duplicated(edge_key), , drop = FALSE]
-  selected <- deg[selection_mask(deg, cfg$selection), , drop = FALSE]
-  selected <- selected[!duplicated(selected$gene_id), , drop = FALSE]
-  ids <- unique(as.character(selected$gene_id))
-  edges <- edges[edges$from %in% ids & edges$to %in% ids, , drop = FALSE]
-  nodes <- merge(data.frame(gene_id = ids), selected[c("gene_id", "gene_name", "log2FoldChange")], by = "gene_id", all.x = TRUE, sort = FALSE)
-  if (nrow(nodes)) {
-    graph <- igraph::graph_from_data_frame(edges[c("from", "to", "score")], directed = FALSE, vertices = data.frame(name = nodes$gene_id))
-    degree <- igraph::degree(graph)
-    if (nrow(nodes) == 1L) {
-      coordinates <- matrix(c(0, 0), nrow = 1L)
-    } else {
-      set.seed(cfg$pathways$seed)
-      coordinates <- igraph::layout_with_fr(graph)
-    }
-    vertex_names <- igraph::V(graph)$name
-    nodes <- nodes[match(vertex_names, nodes$gene_id), , drop = FALSE]
-    nodes$x <- coordinates[match(nodes$gene_id, vertex_names), 1]
-    nodes$y <- coordinates[match(nodes$gene_id, vertex_names), 2]
-    nodes$degree <- unname(degree[match(nodes$gene_id, names(degree))])
-    nodes$label <- ifelse(is.na(nodes$gene_name) | nodes$gene_name == "", nodes$gene_id, nodes$gene_name)
-  } else {
-    nodes$x <- numeric()
-    nodes$y <- numeric()
-    nodes$degree <- integer()
-    nodes$label <- character()
-  }
-  .write_pathway_table(nodes, file.path(output_dir, "ppi_nodes.csv"))
-  .write_pathway_table(edges, file.path(output_dir, "ppi_edges.csv"))
-  saveRDS(list(nodes = nodes, edges = edges), file.path(output_dir, "ppi_network.rds"))
-  list(nodes = nodes, edges = edges)
-}
-
 # 按配置运行选定模块，返回各模块结果、基因集和 ID 映射报告。
 analyze_pathways <- function(analysis, cfg, output_dir = ".") {
-  required_deg <- c("gene_id", "gene_name", "stat", "log2FoldChange", "padj", "pvalue")
-  if (!all(required_deg %in% names(analysis$deg))) stop("analysis$deg 缺少必要列。", call. = FALSE)
-  if (is.null(rownames(analysis$vst))) stop("analysis$vst 行名需为 gene_id。", call. = FALSE)
-  dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
   enabled <- unique(cfg$pathways$enabled)
+  required <- c(if (any(enabled %in% c("ora", "ppi"))) c("gene_id", "gene_name", "log2FoldChange", "padj"),
+    if ("gsea" %in% enabled) c("gene_id", "stat"))
+  if (!all(required %in% names(analysis$deg))) stop("差异或排序表缺少必要列。", call. = FALSE)
+  if ("gsva" %in% enabled && is.null(rownames(analysis$vst))) stop("GSVA 需要逐样本表达矩阵。", call. = FALSE)
+  dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
   available <- c("ora", "gsea", "gsva", "ppi")
   if (!all(enabled %in% available)) stop("pathways$enabled 包含不支持的模块。", call. = FALSE)
   package_map <- list(

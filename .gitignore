@@ -8,3 +8,6 @@ results/
 app/tests/_output/
 app/tests/_browser/
 app/tests/_integration/
+
+/app/examples/local-ppi/
+*.lnk

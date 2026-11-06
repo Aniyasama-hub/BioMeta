@@ -4,7 +4,7 @@
 
 ## 启动
 
-在项目目录双击独立文件夹中的 `Start.cmd`，浏览器会打开 `http://127.0.0.1:7878`。默认使用已经安装生信依赖的 `D:\R\R-4.5.1\bin\Rscript.exe`。
+在项目目录双击独立文件夹中的 `Start.cmd`，浏览器会打开 `http://127.0.0.1:7878`。启动器使用当前电脑上安装的 R。
 
 也可从 PowerShell 启动：
 
@@ -13,7 +13,7 @@
 # 若该端口已被其他程序使用：
 .\launch.ps1 -Port 7879
 # 指定另一套已经安装依赖的 R：
-.\launch.ps1 -Rscript 'D:\R\R-4.5.1\bin\Rscript.exe'
+.\launch.ps1 -Rscript '<R 安装目录>\bin\Rscript.exe'
 ```
 
 启动器只打开本机界面。只有点击“运行当前工具”才执行科学计算。关闭浏览器后任务可继续，前提是保持启动器中的 R 服务运行；关闭服务会清理其后台子进程。重新打开浏览器可在同一服务的历史记录中查看或取消任务。
@@ -23,7 +23,7 @@
 ## 使用顺序
 
 1. 从首页或左侧分类选择工具。
-2. 填写本机路径，或上传 CSV/TSV、Excel、GMT。默认 Count、分组和手工注释来自独立文件夹 data 中的副本。
+2. 填写本机路径，或上传 CSV/TSV、Excel、GMT。每次分析由操作者选择输入。
 3. 读取当前分组，确认对照组与实验组。正 log2FC 表示实验组相对于对照组上调。
 4. 设置计算参数和样式，必要时点击输入检查；该检查不拟合模型。
 5. 点击运行，在结果区查看实际状态、错误和日志。结果成功后才开放图像和数据下载。
@@ -39,8 +39,8 @@
 | 热图与注释 | 差异/高变基因热图 | 模型 VST、筛选、行 Z-score、聚类及样式分层 |
 | 热图与注释 | 自定义基因 Count 热图 | 从 04.4 脚本提取配置接口；保留基因匹配、重复名处理与布局 |
 | 热图与注释 | 手工通路热图 | 从 04.3 脚本提取配置接口，保留 Excel 注释、一基因多通路和方向排序 |
-| 通路与网络 | GO | 本地 org.Mm.eg.db/GO.db，或用户提供的 GO GMT |
-| 通路与网络 | KEGG | 明确来源/版本的本地 KEGG GMT |
+| 通路与网络 | GO | 本地 org.Hs.eg.db 或 org.Mm.eg.db 配合 GO.db，或用户提供的 GO GMT |
+| 通路与网络 | KEGG | 物种对应的 KEGG PATHWAY 或自建 GMT |
 | 通路与网络 | GSEA | 完整有效 Wald stat 排序，整份 GMT 范围检验 |
 | 通路与网络 | GSVA | VST 上计算通路评分，再使用相同设计的 limma 模型比较 |
 | 通路与网络 | PPI | Node + Edge 双文件、STRING ID/分数识别、静态图、离线交互图与邻接矩阵；另可从 Count 模型筛 DEG |
@@ -54,7 +54,7 @@
 
 Count 使用 `gene_id`、可选 `gene_name` 和样本列。DESeq2 入口只接收非负有限整数，不把 TPM/FPKM 作为原始 Count。
 
-分组可以是项目现有的 `Sample,Group`，也可以是 `sample_id,source_sample_id,condition,batch,include`。`source_sample_id` 精确对应 Count 列；内部 `sample_id` 单独转换为安全名称，原始 `HA@CuPB` 组名和样本列保留不变。转换后重名会报错。`include=FALSE` 统一排除。
+分组可以是项目现有的 `Sample,Group`，也可以是 `sample_id,source_sample_id,condition,batch,include`。`source_sample_id` 精确对应 Count 列；内部 `sample_id` 单独转换为安全名称，原始 `Treatment` 组名和样本列保留不变。转换后重名会报错。`include=FALSE` 统一排除。
 
 建模默认纳入当前选定的两个比较组，每组至少两个重复，3–30 个样本，并要求设计有残差自由度。批次缺失时的 single_batch 只是单批次占位；不会据此自动启用批次校正。
 
@@ -74,7 +74,7 @@ CSV/TSV 第一列是唯一行 ID，其余列全部为有限数值，列名作为
 
 ### GO / KEGG / GSEA / GSVA
 
-GMT 每行包含 `term_id<TAB>description<TAB>gene1<TAB>gene2...`，支持 SYMBOL 或项目 gene_id。KEGG/GSEA/GSVA 必须提供实际来源/版本。本地 GO 使用安装包注释并保存相应版本；不静默联网更新。
+GMT 每行包含 `term_id<TAB>description<TAB>gene1<TAB>gene2...`，支持 SYMBOL 或项目 gene_id。上传自建库时填写实际来源与版本。公共库由工具和物种决定，KEGG 和 Reactome 首次运行下载后按物种缓存。GO 使用本机注释包。任务保存实际参考地址、注释来源和基因集校验值。
 
 ORA 的背景来自实际有效受检且能映射的基因。GSEA 使用完整有效 stat，不先筛 DEG；本版在整个 GMT 范围检验和校正，**不同于旧 07 脚本默认只检验指定通路的 selected_only 模式**。两者 FDR 不能直接比较。
 
@@ -131,7 +131,7 @@ results/toolbox/
 
 绘图默认输出 PNG、SVG、TIFF、PDF 和作图原始数据 CSV；PNG 同时用于界面预览。差异分析本身只输出表，不伪造图像。PCA 同时输出坐标、解释方差和负荷；已绘图的复杂对象另存 bundle.rds。旧热图渲染器通过新的设备接口导出真实四格式，不把 PNG 字节写进 SVG 文件。
 
-结果 ZIP 默认只包含 outputs、参数、日志和本机复现配方，不附带原始 Count 快照或整个模型缓存。因此它是**本机结果包**，不是脱离当前工作台和输入快照即可独立迁移的环境镜像。复现前需保留当前代码、输入快照和对应 R 依赖；源脚本适配器会记录脚本 SHA-256。
+结果 ZIP 将图与作图数据放在 `01_图与作图数据`，其余分析结果、注释、参数与日志放在 `02_分析与注释`。Count 输入快照、模型缓存和重绘缓存保存在本地任务目录。复现需要保留代码、输入快照及 R 依赖。源脚本适配器记录脚本 SHA-256。
 
 ## 代码结构与原脚本关系
 

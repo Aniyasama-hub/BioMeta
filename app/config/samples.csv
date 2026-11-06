@@ -1,7 +1,7 @@
 sample_id,source_sample_id,condition,batch,fastq_1,fastq_2,strandedness,include
-M2_1,M2_1,M2,batch1,,,A,TRUE
-M2_2,M2_2,M2,batch1,,,A,TRUE
-M2_3,M2_3,M2,batch1,,,A,TRUE
-HA_CuPB_1,HA@CuPB_1,HA@CuPB,batch1,,,A,TRUE
-HA_CuPB_2,HA@CuPB_2,HA@CuPB,batch1,,,A,TRUE
-HA_CuPB_3,HA@CuPB_3,HA@CuPB,batch1,,,A,TRUE
+Control_1,Control_1,Control,batch1,,,A,TRUE
+Control_2,Control_2,Control,batch1,,,A,TRUE
+Control_3,Control_3,Control,batch1,,,A,TRUE
+Treatment_1,Treatment_1,Treatment,batch1,,,A,TRUE
+Treatment_2,Treatment_2,Treatment,batch1,,,A,TRUE
+Treatment_3,Treatment_3,Treatment,batch1,,,A,TRUE

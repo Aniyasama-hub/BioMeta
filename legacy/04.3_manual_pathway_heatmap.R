@@ -1,10 +1,10 @@
 # 手工通路注释热图：只读取用户填写的Excel，不联网、不执行GO/KEGG富集
 # ============================== 用户配置区 ==============================
-work_dir <- "C:/Users/86135/Desktop/BioWorkbench"
-expression_file <- "data/deg_results.csv"
-metadata_file <- "data/group.csv"; manual_annotation_file <- "data/pathway_annotation.xlsx"
+work_dir <- "."
+expression_file <- "inputs/expression.csv"
+metadata_file <- "inputs/groups.csv"; manual_annotation_file <- "inputs/annotation.xlsx"
 output_dir <- "04.3_Manual_Pathway_Heat_after"; project_name <- "Manual_Pathway"
-sample_id_col <- "Sample"; group_col <- "Group"; selected_groups <- c("M2", "HA@CuPB")
+sample_id_col <- "Sample"; group_col <- "Group"; selected_groups <- c("Control", "Treatment")
 gene_id_col <- "gene_id"; gene_label_col <- "gene_name"; organism <- "mmu"
 
 filter_mode <- "top"                        # top/threshold/custom/all
@@ -27,9 +27,9 @@ unassigned_process <- "Other"; process_order <- NULL
 
 cluster_within_process <- TRUE; cluster_columns <- TRUE
 distance_rows <- "pearson"; distance_columns <- "pearson"; clustering_method <- "complete"
-order_pathways_by_direction <- TRUE          # HA_CuPB-up blocks first, M2-high blocks last
+order_pathways_by_direction <- TRUE          # Treatment-up blocks first, Control-high blocks last
 pathway_direction_cutoff <- 0.25             # mean row-Z difference used for Up/Mixed/Down label
-order_genes_by_direction <- TRUE             # within each pathway: HA_CuPB-up, mixed, then M2-up
+order_genes_by_direction <- TRUE             # within each pathway: Treatment-up, mixed, then Control-up
 gene_direction_cutoff <- 0.15                # row-Z mean difference defining gene direction
 cluster_on_group_means <- TRUE               # stabilize row ordering against replicate-level noise
 group_mean_distance <- "euclidean"           # distance used on the group-mean ordering matrix
@@ -62,6 +62,7 @@ process_font_size <- 18; process_font_face <- "bold"; process_font_color <- "#11
 legend_font_size <- 15; legend_font_face <- "bold"; legend_font_color <- "#111111"
 # TRUE 显示热图颜色图例；FALSE 隐藏图例但不改变热图数据和配色。
 show_heatmap_legend <- TRUE
+legend_side <- "right"                   # 图外区域：left / right / top / bottom
 legend_width_mm <- 4; legend_height_mm <- 32
 
 # Annotation widths and label wrapping.
@@ -202,7 +203,7 @@ write.csv(assignment, file.path(output_dir, "Final_gene_pathway_assignment.csv")
 
 scale_safe <- function(x) { z <- t(scale(t(x))); z[!is.finite(z)] <- 0; z }
 plot_mat <- if (heatmap_scale == "row") scale_safe(norm_selected) else norm_selected
-plot_mat <- pmax(pmin(plot_mat, scale_limit), -scale_limit); rownames(plot_mat) <- make.unique(symbols)
+rownames(plot_mat) <- make.unique(symbols)
 process <- assignment$Pathway; present <- unique(process)
 treat_cols <- which(meta[[group_col]] == selected_groups[2]); control_cols <- which(meta[[group_col]] == selected_groups[1])
 gene_delta <- rowMeans(plot_mat[, treat_cols, drop = FALSE]) - rowMeans(plot_mat[, control_cols, drop = FALSE])
@@ -286,18 +287,18 @@ ht <- ComplexHeatmap::Heatmap(plot_mat, name = "Relative expression", col = col_
     fontface = column_font_face, col = column_font_color),
   column_title_gp = grid::gpar(fontfamily = font_family, fontsize = group_font_size,
     fontface = group_font_face, col = group_font_color),
-  heatmap_legend_param = list(title = "", direction = "vertical",
+  heatmap_legend_param = list(title = "", direction = if (legend_side %in% c("top", "bottom")) "horizontal" else "vertical",
     labels_gp = grid::gpar(fontfamily = font_family, fontsize = legend_font_size,
       fontface = legend_font_face, col = legend_font_color),
-    grid_width = grid::unit(legend_width_mm, "mm"),
-    legend_height = grid::unit(legend_height_mm, "mm")),
+    grid_width = grid::unit(legend_width_mm, "mm"), grid_height = grid::unit(legend_width_mm, "mm"),
+    legend_height = grid::unit(legend_height_mm, "mm"), legend_width = grid::unit(legend_height_mm, "mm")),
   show_heatmap_legend = show_heatmap_legend,
   rect_gp = grid::gpar(col = cell_border_color, lwd = cell_border_width),
   use_raster = use_raster_heatmap)
 draw_file <- function(fmt) {
   path <- file.path(output_dir, paste0(project_name, "_Heatmap.", fmt))
   if (fmt == "pdf") pdf(path, image_width, image_height) else png(path, image_width, image_height, units = "in", res = dpi)
-  out <- ComplexHeatmap::draw(ht, heatmap_legend_side = "right",
+  out <- ComplexHeatmap::draw(ht, heatmap_legend_side = legend_side,
     align_heatmap_legend = "global_center"); dev.off(); out
 }
 drawn <- NULL; for (fmt in output_formats) { z <- draw_file(fmt); if (is.null(drawn)) drawn <- z }

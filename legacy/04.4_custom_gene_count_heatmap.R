@@ -8,24 +8,15 @@
 
 # ============================= 1. 用户配置区 =============================
 # ---- 1.1 路径、标题和目标基因（通常只需修改这里）----
-work_dir <- "C:/Users/86135/Desktop/BioWorkbench"
-count_file <- "data/gene_count.csv"            # 可填写相对 work_dir 的路径或绝对路径
-group_file <- "data/group.csv"
-output_dir <- "04.4_M2_Polarization_Heatmap"
-plot_title <- "M1 Associated Gene"
+work_dir <- "."
+count_file <- "inputs/counts.csv"            # 可填写相对 work_dir 的路径或绝对路径
+group_file <- "inputs/groups.csv"
+output_dir <- "custom_gene_heatmap"
+plot_title <- "Selected genes"
 output_prefix <- "Selected_Genes"
 
 # 基因可填写 gene_name 或 gene_id；不区分大小写，未匹配基因会写入报告。
-target_genes <- c(
-  "Arg1",
-  "Mrc1",
-  "Retnla",
-  "Chil3",
-  "Clec10a",
-  "Cd163",
-  "Il10",
-  "Tgfb1"
-)
+target_genes <- c("gene_001", "gene_002")
 
 # ---- 1.2 输入列识别 ----
 # 设为 NULL 时自动嗅探；如自动识别不正确，可直接填写实际列名。
@@ -37,7 +28,7 @@ gene_name_candidates <- c("gene_name", "gene_symbol", "symbol", "GeneName", "SYM
 gene_id_candidates <- c("gene_id", "GeneID", "ensembl_gene_id", "ID")
 sample_col_candidates <- c("Sample", "SampleID", "sample", "sample_id", "ID")
 group_col_candidates <- c("Group", "group", "Condition", "condition", "Treatment")
-selected_groups <- NULL                    # NULL=使用分组表全部组；也可写 c("M2","HA_CuPB")
+selected_groups <- NULL                    # NULL=使用分组表全部组；也可写 c("Control","Treatment")
 
 # ---- 1.3 Count 过滤、转换和标准化 ----
 min_total_count <- 10                      # 每个基因在所选样本中的 Count 总和下限
@@ -67,7 +58,7 @@ na_color <- "#E5E5E5"
 # 分组注释色；组数超过色板长度时自动循环。
 morandi_group_palette <- c("#AFC3D8", "#DDB9BC", "#B9C9BE", "#C8BDD2",
                             "#D8C8AD", "#AFC8C9", "#D2BDB3", "#BCC4D6")
-group_colors <- c()                        # 可覆盖，如 c(M2="#AFC3D8", HA_CuPB="#DDB9BC")
+group_colors <- c()                        # 可覆盖，如 c(Control="#AFC3D8", Treatment="#DDB9BC")
 cell_border_color <- "white"; cell_border_width <- 0.4
 row_gap_mm <- 0
 column_gap_mm <- 0                       # 组间不额外留白，仅保留与组内一致的单元格边界
@@ -83,9 +74,10 @@ group_font_size <- 18; group_font_face <- "bold"; group_font_color <- "#111111"
 legend_title_font_size <- 18; legend_title_font_face <- "bold"; legend_title_font_color <- "#111111"
 legend_label_font_size <- 18; legend_label_font_face <- "bold"; legend_label_font_color <- "#111111"
 show_gene_names <- TRUE
-show_sample_names <- FALSE                  # FALSE 隐藏 M2_1、HA_CuPB_1 等组内样本名
+show_sample_names <- FALSE                  # FALSE 隐藏 Control_1、Treatment_1 等组内样本名
 sample_name_rotation <- 45
 show_heatmap_legend <- TRUE
+legend_side <- "right"                   # 图外区域：left / right / top / bottom
 legend_title <- "Z-score"                 # 设为 "" 可隐藏图例标题
 legend_bar_width_mm <- 3                   # 图例色条宽度
 legend_bar_height_mm <- 20                 # 图例色条高度
@@ -122,7 +114,7 @@ safe_dist <- function(method) {
 }
 scale_rows <- function(m) {
   z <- t(scale(t(m))); z[!is.finite(z)] <- 0
-  pmax(pmin(z, scale_limit), -scale_limit)
+  z
 }
 
 count_path <- resolve_path(count_file); group_path <- resolve_path(group_file)
@@ -206,20 +198,21 @@ ht <- ComplexHeatmap::Heatmap(plot_mat, name = legend_title, col = col_fun, na_c
   row_gap = grid::unit(row_gap_mm, "mm"), column_gap = grid::unit(column_gap_mm, "mm"),
   rect_gp = grid::gpar(col = cell_border_color, lwd = cell_border_width), use_raster = use_raster,
   show_heatmap_legend = show_heatmap_legend, heatmap_legend_param = list(title = legend_title,
+    direction = if (legend_side %in% c("top", "bottom")) "horizontal" else "vertical",
     at = legend_at,
     title_gp = grid::gpar(fontfamily = font_family, fontsize = legend_title_font_size,
       fontface = legend_title_font_face, col = legend_title_font_color),
     labels_gp = grid::gpar(fontfamily = font_family, fontsize = legend_label_font_size,
       fontface = legend_label_font_face, col = legend_label_font_color),
-    grid_width = grid::unit(legend_bar_width_mm, "mm"),
-    legend_height = grid::unit(legend_bar_height_mm, "mm")))
+    grid_width = grid::unit(legend_bar_width_mm, "mm"), grid_height = grid::unit(legend_bar_width_mm, "mm"),
+    legend_height = grid::unit(legend_bar_height_mm, "mm"), legend_width = grid::unit(legend_bar_height_mm, "mm")))
 
 draw_one <- function(fmt) {
   file <- file.path(out_path, paste0(output_prefix, "_Heatmap.", fmt))
   if (fmt == "pdf") grDevices::pdf(file, image_width, image_height) else grDevices::png(file, image_width, image_height, units = "in", res = dpi)
   ComplexHeatmap::draw(ht, column_title = plot_title,
     column_title_gp = grid::gpar(fontfamily = font_family, fontsize = title_font_size,
-      fontface = title_font_face, col = title_font_color), heatmap_legend_side = "right")
+      fontface = title_font_face, col = title_font_color), heatmap_legend_side = legend_side)
   grDevices::dev.off()
 }
 for (fmt in output_formats) draw_one(fmt)

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>生信图片排版 · BioWorkbench</title>
+<style>
+body{margin:0;background:#eeeae0;color:#27352d;font:14px system-ui,sans-serif}
+header{position:sticky;top:0;display:flex;flex-wrap:wrap;gap:7px;align-items:center;padding:12px;background:#fffdf7;border-bottom:1px solid #cfc7b8}
+header strong{margin-right:8px}button,select{background:#fffdf7;border:1px solid #aca99b;padding:6px 9px;color:#26382d}
+button:hover{background:#e0e9de}main{display:grid;place-items:center;padding:14px}canvas{max-width:100%;max-height:calc(100vh - 125px);width:auto;height:auto;background:white;box-shadow:0 1px 10px #0002;touch-action:none}
+p{margin:0;padding:8px 14px}.download{background:#385746;color:white}
+</style>
+<header><strong>图片排版编辑器</strong>
+<label>选择对象 <select id="kind"><option value="all">图片与序号</option><option value="image">仅图片</option><option value="label">仅序号</option></select></label>
+<button id="select-all">全选当前类型</button>
+<button data-align="horizontal" title="使所选对象的中心处于同一水平线">水平对齐</button>
+<button data-align="vertical" title="使所选对象的中心处于同一竖直线">竖直对齐</button>
+<button data-align="mirror-x" title="沿画布中央的竖轴对称">左右对称</button>
+<button data-align="mirror-y" title="沿画布中央的横轴对称">上下对称</button>
+<button data-align="mirror" title="将所选对象的位置绕画布中心旋转 180°，图像与文字本身保持正向">中心对称</button>
+<button id="reset">恢复初排</button><button id="export" class="download">导出 PNG</button></header>
+<p id="status" role="status">拖动图片或序号。按住 Shift 可多选，方向键可微调位置。</p>
+<main><canvas id="figure" tabindex="0" aria-label="图片排版画布"></canvas></main>
+<script id="figure-config" type="application/json">__FIGURE_CONFIG__</script>
+<script src="figure-layout.js"></script></html>
