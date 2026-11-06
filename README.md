@@ -1,25 +1,31 @@
 # BioWorkbench · 转录组分析工作站
 
-BioWorkbench 是面向人和小鼠 Bulk RNA-seq 的本地分析与科研绘图工作站。通过浏览器配置输入、运行 R 分析、审阅结果并导出图表。既可从 Count 和分组开始，也可直接导入已有的差异表达结果、归一化矩阵或网络节点与边。
+BioWorkbench 是面向**人和小鼠 Bulk RNA-seq** 的本地分析与科研绘图工作站。研究者可以从基因计数和样本分组开始分析，也可以直接复用已有的差异表达结果、逐样本表达矩阵或网络表。通过浏览器完成参数配置、结果审阅和图表导出，由本机 R 执行计算。
 
-[操作指南](操作指南.md) · [项目介绍与适用范围](介绍.md) · [版本记录](CHANGELOG.md) · [第三方组件](app/THIRD_PARTY_NOTICES.md)
+## 特点与使用场景
 
-## 启动
+| 使用场景 | BioWorkbench 提供的功能 |
+| --- | --- |
+| 从 Count 开始分析 | Bulk RNA-seq 流程串联 PCA、DESeq2 差异分析、火山图、热图及下游分析。各步可单独检查和调整，再确认进入下一步。 |
+| 已有分析结果，继续做下游 | GO／KEGG 可读差异结果，GSEA 可读带方向的基因排序，GSVA 可读逐样本表达矩阵和分组。按需选用公共参考库或自建基因集。 |
+| 整理通路或网络结果 | PPI 可直接导入 Node／Edge，也可用 Count 加分组或 DEG 配合互作参考生成网络数据。独立编辑器支持节点样式、布局和网络筛选。 |
+| 准备论文图表 | 可从已有分析结果调整配色、字号、图例及导出格式。组图支持逐图大小、纸张方向、实时分栏预览和在线微调。 |
 
-1. 下载并解压源码。安装 Windows 版 R（本版在 R 4.5.1 上验证）以及所需 R 和 Bioconductor 软件包。
-2. 双击 **Start.cmd**。启动器会查找 PATH 或 Windows 注册表中的 R。也可运行下面的 PowerShell 命令显式指定 Rscript。
-3. 打开启动窗口显示的本机地址，默认端口为 7878。保持启动窗口开启。
+本地运行会保留任务记录、输入快照、分析参数和绘图数据，便于复核与重绘。常见输入错误会指出文件名和具体问题。免疫模块提供基因集相对富集评分，适合比较表达特征。更多输入规格与解释边界见[项目介绍与适用范围](介绍.md)。
+
+## 下载 ZIP 与启动
+
+**[下载最新版 ZIP](https://github.com/Aniyasama-hub/BioWorkbench/archive/refs/heads/main.zip)** · [下载 v0.2.0 固定快照](https://github.com/Aniyasama-hub/BioWorkbench/archive/da098b28a121cc6c9b2f9b64c3e411c15e8d0a24.zip)
+
+1. 点击上方链接，或在仓库主页选择 **Code → Download ZIP**，将压缩包完整解压到本机。
+2. 安装 Windows 版 R 与所需的 R／Bioconductor 包。本版在 R 4.5.1 上验证，依赖清单见 [依赖检查脚本](app/tools/dependencies.R)。
+3. 在解压目录双击 **Start.cmd**。浏览器打开本机页面，默认端口为 7878，以启动窗口显示的地址为准。
+4. 如果电脑有多套 R，可在 PowerShell 中显式指定装好依赖的版本。
 
 ~~~powershell
 .\launch.ps1 -Rscript '<R 安装目录>\bin\Rscript.exe'
 ~~~
 
-已安装的依赖可在工作站系统设置中查看，也可执行 `Rscript app/tools/dependencies.R`。功能所需包按模块使用，公共参考库按工具与物种配置。
+可用 `Rscript app/tools/dependencies.R` 检查当前环境已安装的包。ZIP 提供工作站源码、合成示例与文档。R 和依赖需本机安装，部分公共参考库的首次获取需要联网。
 
-## 核心功能
-
-- Bulk RNA-seq 分步审核，以及独立的 PCA、差异表达、火山图和热图。
-- GO／KEGG 过度代表分析、GSEA、GSVA、免疫相关基因集评分，以及 PPI 数据准备和独立网络编辑器。
-- 通用科学绘图、科研组图排版、任务历史和结构化输入错误提示。多数图形可从已有结果重新绘制，导出格式按工具提供。
-
-源码包包含程序、合成示例、测试和说明。用户输入、任务记录、缓存、公共参考库副本和运行结果保存在本机。KEGG、Reactome 等公共参考的获取可能需要联网。工作站用于本地科研探索及图表制作，具体输入和解释边界见[适用范围](介绍.md)。
+[操作指南](操作指南.md) · [项目介绍与适用范围](介绍.md) · [版本记录](CHANGELOG.md) · [第三方组件](app/THIRD_PARTY_NOTICES.md)
