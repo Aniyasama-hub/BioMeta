@@ -1,0 +1,675 @@
+{
+  "schema_version": 1,
+  "categories": [
+    {
+      "id": "workflows",
+      "title": "分析流程库",
+      "title_en": "Workflow Library",
+      "summary": "把输入、模型和结果解释连接起来。"
+    },
+    {
+      "id": "methods",
+      "title": "算法原理库",
+      "title_en": "Methods & Algorithms",
+      "summary": "理解统计假设、参数和方法边界。"
+    },
+    {
+      "id": "scripts",
+      "title": "脚本解析库",
+      "title_en": "Script Guide",
+      "summary": "按步骤学习操作，每行代码配注释，并可核对当前源码。"
+    },
+    {
+      "id": "references",
+      "title": "参考文献库",
+      "title_en": "Reference Library",
+      "summary": "原始方法论文与官方资料。"
+    }
+  ],
+  "learning_path": [
+    "bulk-rnaseq",
+    "normalization",
+    "pca",
+    "deg",
+    "go-kegg",
+    "reactome",
+    "gmt",
+    "gsea"
+  ],
+  "featured": [
+    "pca",
+    "gmt",
+    "bulk-rnaseq"
+  ],
+  "articles": [
+    {
+      "id": "bulk-rnaseq",
+      "title": "Bulk RNA-seq 完整分析流程",
+      "title_en": "Bulk RNA-seq workflow",
+      "category": "workflows",
+      "difficulty": "入门",
+      "tags": [
+        "RNA-seq",
+        "流程",
+        "Count"
+      ],
+      "features": [
+        "bulk"
+      ],
+      "scripts": [],
+      "references": [
+        "deseq2-2014"
+      ],
+      "file": "bulk-rnaseq.md",
+      "updated": "2026-11-09",
+      "language": "zh-CN",
+      "translations": {},
+      "summary": "从 Count 与分组开始，逐步完成样本检查、差异比较、功能解释和结果整理。",
+      "related": [
+        "normalization",
+        "pca",
+        "deg"
+      ],
+      "article_type": "concept",
+      "technical_articles": [
+        "bulk-rnaseq-code"
+      ]
+    },
+    {
+      "id": "pca",
+      "title": "PCA：从原理到样本检查",
+      "title_en": "Principal component analysis",
+      "category": "methods",
+      "difficulty": "入门",
+      "tags": [
+        "PCA",
+        "降维",
+        "主成分",
+        "VST"
+      ],
+      "features": [
+        "pca",
+        "matrix_pca"
+      ],
+      "scripts": [],
+      "references": [
+        "pca-2016",
+        "r-prcomp-docs",
+        "deseq2-2014",
+        "deseq2-docs"
+      ],
+      "file": "pca.md",
+      "updated": "2026-11-09",
+      "language": "zh-CN",
+      "translations": {},
+      "summary": "用手算例子、公式和分步图解，理解矩阵方向、VST、高变基因、中心化、SVD、解释方差与样本读图。",
+      "related": [
+        "bulk-rnaseq",
+        "normalization",
+        "deg"
+      ],
+      "article_type": "concept",
+      "technical_articles": [
+        "pca-code"
+      ]
+    },
+    {
+      "id": "normalization",
+      "title": "标准化、VST 与按行缩放",
+      "title_en": "Normalization and transformation",
+      "category": "methods",
+      "difficulty": "入门",
+      "tags": [
+        "VST",
+        "标准化",
+        "表达矩阵"
+      ],
+      "features": [
+        "pca",
+        "heatmap",
+        "gsva"
+      ],
+      "scripts": [],
+      "references": [
+        "deseq2-2014",
+        "deseq2-docs"
+      ],
+      "file": "normalization.md",
+      "updated": "2026-11-09",
+      "language": "zh-CN",
+      "translations": {},
+      "summary": "用具体数字解释测序量校正、VST 与热图行缩放，再按输入单位选择处理步骤。",
+      "related": [
+        "bulk-rnaseq",
+        "pca",
+        "deg"
+      ],
+      "article_type": "concept",
+      "technical_articles": [
+        "normalization-code"
+      ]
+    },
+    {
+      "id": "deg",
+      "title": "DEG：变化幅度与统计证据",
+      "title_en": "Differential expression analysis",
+      "category": "methods",
+      "difficulty": "进阶",
+      "tags": [
+        "DEG",
+        "DESeq2",
+        "差异表达"
+      ],
+      "features": [
+        "deg",
+        "volcano"
+      ],
+      "scripts": [],
+      "references": [
+        "deseq2-2014",
+        "deseq2-docs"
+      ],
+      "file": "deg.md",
+      "updated": "2026-11-09",
+      "language": "zh-CN",
+      "translations": {},
+      "summary": "从两倍变化和重复波动讲起，理解模型、效应量、多重校正与结果筛选。",
+      "related": [
+        "bulk-rnaseq",
+        "normalization",
+        "pca"
+      ],
+      "article_type": "concept",
+      "technical_articles": [
+        "deg-code"
+      ]
+    },
+    {
+      "id": "go-kegg",
+      "title": "GO / KEGG 注释库与富集分析",
+      "title_en": "GO and KEGG annotation and enrichment",
+      "category": "methods",
+      "difficulty": "进阶",
+      "tags": [
+        "GO",
+        "KEGG",
+        "ORA",
+        "富集",
+        "注释库"
+      ],
+      "features": [
+        "go",
+        "kegg"
+      ],
+      "scripts": [],
+      "references": [
+        "go-2000",
+        "kegg-2000",
+        "go-enrichment-docs",
+        "kegg-api-docs",
+        "annotationdbi-docs"
+      ],
+      "file": "go-kegg.md",
+      "updated": "2026-11-09",
+      "language": "zh-CN",
+      "translations": {},
+      "summary": "GO 三分类与 KEGG 的真实来源、候选与背景、实际列筛选、通路排序、目的通路标记和官网机制图导出。",
+      "related": [
+        "reactome",
+        "gsea",
+        "bulk-rnaseq"
+      ],
+      "annotation_libraries": [
+        "go",
+        "kegg"
+      ],
+      "article_type": "concept",
+      "technical_articles": [
+        "go-kegg-code"
+      ]
+    },
+    {
+      "id": "gsea",
+      "title": "GSEA：保留完整排序",
+      "title_en": "Gene set enrichment analysis",
+      "category": "methods",
+      "difficulty": "进阶",
+      "tags": [
+        "GSEA",
+        "排序",
+        "fgsea"
+      ],
+      "features": [
+        "gsea"
+      ],
+      "scripts": [],
+      "references": [
+        "gsea-2005",
+        "fgsea-docs"
+      ],
+      "file": "gsea.md",
+      "updated": "2026-11-09",
+      "language": "zh-CN",
+      "translations": {},
+      "summary": "GSEA 判断某基因集是否集中在完整排序的一端，适合发现许多成员共同变化、但单个成员未必都达到差异阈值的模式。",
+      "related": [
+        "bulk-rnaseq",
+        "normalization",
+        "pca"
+      ],
+      "article_type": "concept",
+      "technical_articles": [
+        "gsea-code"
+      ]
+    },
+    {
+      "id": "limma",
+      "title": "limma 与归一化表达示例",
+      "title_en": "Linear models with limma",
+      "category": "methods",
+      "difficulty": "进阶",
+      "tags": [
+        "limma",
+        "CPM",
+        "线性模型"
+      ],
+      "features": [],
+      "scripts": [],
+      "references": [
+        "limma-2015"
+      ],
+      "file": "limma.md",
+      "updated": "2026-11-09",
+      "language": "zh-CN",
+      "translations": {},
+      "summary": "limma 用线性模型描述条件和连续表达值的关系，并通过经验贝叶斯思想跨特征共享方差信息，帮助小样本比较。",
+      "related": [
+        "bulk-rnaseq",
+        "normalization",
+        "pca"
+      ],
+      "article_type": "concept",
+      "technical_articles": [
+        "limma-code"
+      ]
+    },
+    {
+      "id": "reactome",
+      "title": "Reactome 注释库：反应、通路与物种推断",
+      "title_en": "Reactome pathways and annotations",
+      "category": "methods",
+      "difficulty": "进阶",
+      "tags": [
+        "Reactome",
+        "注释库",
+        "GSEA",
+        "GSVA",
+        "通路"
+      ],
+      "features": [
+        "gsea",
+        "gsva",
+        "manual_heatmap"
+      ],
+      "scripts": [],
+      "references": [
+        "reactome-2024",
+        "reactome-downloads",
+        "annotationdbi-docs"
+      ],
+      "file": "reactome.md",
+      "updated": "2026-11-09",
+      "language": "zh-CN",
+      "translations": {},
+      "summary": "说明 Reactome 的层级、编号与物种映射，以及工作站 GSEA、GSVA、自动通路注释热图如何使用真实本地注释。",
+      "related": [
+        "go-kegg",
+        "gsea",
+        "bulk-rnaseq"
+      ],
+      "annotation_libraries": [
+        "reactome"
+      ],
+      "article_type": "concept",
+      "technical_articles": [
+        "reactome-code"
+      ]
+    },
+    {
+      "id": "gmt",
+      "title": "GMT 基因集文件：从成员清单到自己的基因集",
+      "title_en": "Build your own GMT gene sets",
+      "category": "methods",
+      "difficulty": "入门",
+      "tags": [
+        "GMT",
+        "基因集",
+        "自定义通路",
+        "文件格式"
+      ],
+      "features": [
+        "gsea",
+        "gsva"
+      ],
+      "scripts": [],
+      "references": [
+        "gmt-format-docs",
+        "fgsea-docs"
+      ],
+      "file": "gmt.md",
+      "updated": "2026-11-09",
+      "language": "zh-CN",
+      "translations": {},
+      "summary": "从选成员、记证据和统一编号开始，用 Excel 或文本编辑器制作自己的 GMT，附草表、格式示例与匹配检查步骤。",
+      "related": [
+        "gsea",
+        "go-kegg",
+        "reactome"
+      ],
+      "article_type": "concept",
+      "technical_articles": [
+        "gmt-code"
+      ]
+    },
+    {
+      "id": "bulk-rnaseq-code",
+      "title": "Bulk RNA-seq 技术帖：从 Count 到 PCA 和 DEG 的逐行操作",
+      "title_en": "Bulk RNA-seq workflow — annotated R tutorial",
+      "category": "scripts",
+      "difficulty": "入门",
+      "tags": [
+        "RNA-seq",
+        "流程",
+        "Count",
+        "R",
+        "逐行注释"
+      ],
+      "features": [],
+      "scripts": [
+        "bulk-workflow"
+      ],
+      "references": [
+        "deseq2-2014"
+      ],
+      "file": "bulk-rnaseq-code.md",
+      "updated": "2026-11-09",
+      "language": "zh-CN",
+      "translations": {},
+      "summary": "逐步解释输入、算法处理和输出操作，代码逐行配有中文注释；配合 Bulk RNA-seq 完整分析流程 阅读。",
+      "related": [
+        "bulk-rnaseq"
+      ],
+      "article_type": "technical",
+      "technical_articles": []
+    },
+    {
+      "id": "pca-code",
+      "title": "PCA 技术帖：手算复现、坐标和四种图片导出",
+      "title_en": "Principal component analysis — annotated R tutorial",
+      "category": "scripts",
+      "difficulty": "入门",
+      "tags": [
+        "PCA",
+        "降维",
+        "主成分",
+        "VST",
+        "R",
+        "逐行注释"
+      ],
+      "features": [],
+      "scripts": [
+        "pca-prepare",
+        "pca-render"
+      ],
+      "references": [
+        "pca-2016",
+        "r-prcomp-docs",
+        "deseq2-2014",
+        "deseq2-docs"
+      ],
+      "file": "pca-code.md",
+      "updated": "2026-11-09",
+      "language": "zh-CN",
+      "translations": {},
+      "summary": "逐步解释输入、算法处理和输出操作，代码逐行配有中文注释；配合 PCA：从原理到样本检查 阅读。",
+      "related": [
+        "pca"
+      ],
+      "article_type": "technical",
+      "technical_articles": []
+    },
+    {
+      "id": "normalization-code",
+      "title": "标准化技术帖：大小因子、VST 与行缩放逐行解释",
+      "title_en": "Normalization and transformation — annotated R tutorial",
+      "category": "scripts",
+      "difficulty": "入门",
+      "tags": [
+        "VST",
+        "标准化",
+        "表达矩阵",
+        "R",
+        "逐行注释"
+      ],
+      "features": [],
+      "scripts": [
+        "count-model"
+      ],
+      "references": [
+        "deseq2-2014",
+        "deseq2-docs"
+      ],
+      "file": "normalization-code.md",
+      "updated": "2026-11-09",
+      "language": "zh-CN",
+      "translations": {},
+      "summary": "逐步解释输入、算法处理和输出操作，代码逐行配有中文注释；配合 标准化、VST 与按行缩放 阅读。",
+      "related": [
+        "normalization"
+      ],
+      "article_type": "technical",
+      "technical_articles": []
+    },
+    {
+      "id": "deg-code",
+      "title": "DESeq2 技术帖：读表、模型、对比与完整结果导出",
+      "title_en": "Differential expression analysis — annotated R tutorial",
+      "category": "scripts",
+      "difficulty": "进阶",
+      "tags": [
+        "DEG",
+        "DESeq2",
+        "差异表达",
+        "R",
+        "逐行注释"
+      ],
+      "features": [],
+      "scripts": [
+        "count-model",
+        "deg-results"
+      ],
+      "references": [
+        "deseq2-2014",
+        "deseq2-docs"
+      ],
+      "file": "deg-code.md",
+      "updated": "2026-11-09",
+      "language": "zh-CN",
+      "translations": {},
+      "summary": "逐步解释输入、算法处理和输出操作，代码逐行配有中文注释；配合 DEG：变化幅度与统计证据 阅读。",
+      "related": [
+        "deg"
+      ],
+      "article_type": "technical",
+      "technical_articles": []
+    },
+    {
+      "id": "go-kegg-code",
+      "title": "ORA 技术帖：背景、超几何检验与 BH 校正逐行解释",
+      "title_en": "GO and KEGG annotation and enrichment — annotated R tutorial",
+      "category": "scripts",
+      "difficulty": "进阶",
+      "tags": [
+        "GO",
+        "KEGG",
+        "ORA",
+        "富集",
+        "注释库",
+        "R",
+        "逐行注释"
+      ],
+      "features": [],
+      "scripts": [
+        "ora-statistics",
+        "public-annotation"
+      ],
+      "references": [
+        "go-2000",
+        "kegg-2000",
+        "go-enrichment-docs",
+        "kegg-api-docs",
+        "annotationdbi-docs"
+      ],
+      "file": "go-kegg-code.md",
+      "updated": "2026-11-09",
+      "language": "zh-CN",
+      "translations": {},
+      "summary": "逐步解释输入、算法处理和输出操作，代码逐行配有中文注释；配合 GO / KEGG 注释库与富集分析 阅读。",
+      "related": [
+        "go-kegg"
+      ],
+      "article_type": "technical",
+      "technical_articles": []
+    },
+    {
+      "id": "gsea-code",
+      "title": "GSEA 技术帖：完整排序、GMT、fgsea 与曲线导出",
+      "title_en": "Gene set enrichment analysis — annotated R tutorial",
+      "category": "scripts",
+      "difficulty": "进阶",
+      "tags": [
+        "GSEA",
+        "排序",
+        "fgsea",
+        "R",
+        "逐行注释"
+      ],
+      "features": [],
+      "scripts": [
+        "gsea-run"
+      ],
+      "references": [
+        "gsea-2005",
+        "fgsea-docs"
+      ],
+      "file": "gsea-code.md",
+      "updated": "2026-11-09",
+      "language": "zh-CN",
+      "translations": {},
+      "summary": "逐步解释输入、算法处理和输出操作，代码逐行配有中文注释；配合 GSEA：保留完整排序 阅读。",
+      "related": [
+        "gsea"
+      ],
+      "article_type": "technical",
+      "technical_articles": []
+    },
+    {
+      "id": "limma-code",
+      "title": "limma 技术帖：设计、对比与经验贝叶斯逐行解释",
+      "title_en": "Linear models with limma — annotated R tutorial",
+      "category": "scripts",
+      "difficulty": "进阶",
+      "tags": [
+        "limma",
+        "CPM",
+        "线性模型",
+        "R",
+        "逐行注释"
+      ],
+      "features": [],
+      "scripts": [
+        "example-preparation"
+      ],
+      "references": [
+        "limma-2015"
+      ],
+      "file": "limma-code.md",
+      "updated": "2026-11-09",
+      "language": "zh-CN",
+      "translations": {},
+      "summary": "逐步解释输入、算法处理和输出操作，代码逐行配有中文注释；配合 limma 与归一化表达示例 阅读。",
+      "related": [
+        "limma"
+      ],
+      "article_type": "technical",
+      "technical_articles": []
+    },
+    {
+      "id": "reactome-code",
+      "title": "Reactome 技术帖：下载表、物种与成员映射逐行解释",
+      "title_en": "Reactome pathways and annotations — annotated R tutorial",
+      "category": "scripts",
+      "difficulty": "进阶",
+      "tags": [
+        "Reactome",
+        "注释库",
+        "GSEA",
+        "GSVA",
+        "通路",
+        "R",
+        "逐行注释"
+      ],
+      "features": [],
+      "scripts": [
+        "public-annotation",
+        "gsea-run"
+      ],
+      "references": [
+        "reactome-2024",
+        "reactome-downloads",
+        "annotationdbi-docs"
+      ],
+      "file": "reactome-code.md",
+      "updated": "2026-11-09",
+      "language": "zh-CN",
+      "translations": {},
+      "summary": "逐步解释输入、算法处理和输出操作，代码逐行配有中文注释；配合 Reactome 注释库：反应、通路与物种推断 阅读。",
+      "related": [
+        "reactome"
+      ],
+      "article_type": "technical",
+      "technical_articles": []
+    },
+    {
+      "id": "gmt-code",
+      "title": "GMT 技术帖：从成员 CSV 构建文件并检查匹配",
+      "title_en": "Build your own GMT gene sets — annotated R tutorial",
+      "category": "scripts",
+      "difficulty": "入门",
+      "tags": [
+        "GMT",
+        "基因集",
+        "自定义通路",
+        "文件格式",
+        "R",
+        "逐行注释"
+      ],
+      "features": [],
+      "scripts": [],
+      "references": [
+        "gmt-format-docs",
+        "fgsea-docs"
+      ],
+      "file": "gmt-code.md",
+      "updated": "2026-11-09",
+      "language": "zh-CN",
+      "translations": {},
+      "summary": "逐步解释输入、算法处理和输出操作，代码逐行配有中文注释；配合 GMT 基因集文件：从成员清单到自己的基因集 阅读。",
+      "related": [
+        "gmt"
+      ],
+      "article_type": "technical",
+      "technical_articles": []
+    }
+  ]
+}

@@ -4,10 +4,13 @@ app/results/
 results/
 .Rhistory
 .RData
+__pycache__/
+*.pyc
+app/tests/_pathway-review/
 *.log
 app/tests/_output/
 app/tests/_browser/
 app/tests/_integration/
+app/tests/_enhancements/
 
 /app/examples/local-ppi/
-*.lnk

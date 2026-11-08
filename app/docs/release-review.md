@@ -40,8 +40,8 @@
 在项目根目录将 Rscript 路径替换为实际安装位置后执行：
 
 ```powershell
-& '<R 安装目录>\bin\Rscript.exe' --vanilla app/tests/smoke.R app
-& '<R 安装目录>\bin\Rscript.exe' --vanilla app/tests/integration.R app
+& 'D:\R\R-4.5.1\bin\Rscript.exe' --vanilla app/tests/smoke.R app
+& 'D:\R\R-4.5.1\bin\Rscript.exe' --vanilla app/tests/integration.R app
 ```
 
 第二项会实际执行合成分析，并在工作站结果目录产生测试任务；请在独立测试副本中运行。测试产物被 Git 忽略。

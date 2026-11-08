@@ -1,0 +1,38 @@
+[
+  {
+    "id": "go",
+    "name": "Gene Ontology",
+    "homepage": "https://geneontology.org/",
+    "source": "GO.db 条目名称；org.Hs.eg.db / org.Mm.eg.db 的 GOALL、ONTOLOGYALL 映射",
+    "identifier": "Entrez Gene 映射到输入 gene_id；GO: 编号保持不变",
+    "coverage": "BP 生物过程、CC 细胞组分、MF 分子功能；GOALL 包含祖先条目映射。",
+    "features": ["go", "gsea", "gsva", "manual_heatmap"],
+    "packages": ["GO.db", "org.Hs.eg.db", "org.Mm.eg.db", "AnnotationDbi"],
+    "version_policy": "使用本机所选 R 的注释包版本和来源日期；分析记录实际包版本、映射和 GMT 哈希。",
+    "limitation": "本机注释有版本延迟，不能声称覆盖所有基因功能；GOALL 传播关系不等于额外独立实验。"
+  },
+  {
+    "id": "kegg",
+    "name": "KEGG PATHWAY",
+    "homepage": "https://www.kegg.jp/kegg/pathway.html",
+    "source": "KEGG REST 的 link/pathway/<hsa|mmu> 与 list/pathway/<hsa|mmu> 合并表",
+    "identifier": "hsa / mmu 通路编号与 Entrez Gene；严格区分物种",
+    "coverage": "按人或小鼠下载的通路成员与正式名称；机制图取自 KEGG get/<id>/image。",
+    "features": ["kegg", "gsea", "gsva", "manual_heatmap"],
+    "packages": ["org.Hs.eg.db", "org.Mm.eg.db", "AnnotationDbi"],
+    "version_policy": "复用本机缓存，记录下载时间、来源、实际分析 GMT 哈希；下载时间不冒充数据库发行版本。",
+    "limitation": "KEGG REST 仅供符合条款的学术使用，每秒最多三次请求；官网图是参考机制图，未叠加本次表达量。"
+  },
+  {
+    "id": "reactome",
+    "name": "Reactome",
+    "homepage": "https://reactome.org/",
+    "source": "https://reactome.org/download/current/NCBI2Reactome_All_Levels.txt",
+    "identifier": "Entrez Gene 对应 R-HSA / R-MMU 稳定通路编号",
+    "coverage": "按 Homo sapiens 或 Mus musculus 筛选 All Levels 通路成员，包含层级中的多个层次。",
+    "features": ["gsea", "gsva", "manual_heatmap"],
+    "packages": ["org.Hs.eg.db", "org.Mm.eg.db", "AnnotationDbi"],
+    "version_policy": "本地缓存记录获取时间与来源，分析导出实际基因集哈希；未记录的发行号显示未知。",
+    "limitation": "条目可有上下级共享基因；小鼠等物种中部分事件来自同源推断，不能全部当作直接实验证据。"
+  }
+]

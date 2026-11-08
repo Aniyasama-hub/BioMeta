@@ -24,3 +24,17 @@ The offline network export copies the library and its full license beside `netwo
   — file confidence scores multiplied by 1000.
 
 R dependencies remain installed packages, not copied source trees. Their original package licenses apply. Existing adapted heatmap scripts are user-project copies in `legacy/`; they are not attributed to the above MIT projects.
+
+## Scientific palette references
+
+The three-stop Sunset and BuRd presets use endpoints and a central colour from Paul Tol's documented colour schemes. The continuous ramp is reconstructed from those three stops. The YlOrBr preset follows the ColorBrewer sequential scheme.
+
+- https://sronpersonalpages.nl/~pault/
+- https://colorbrewer2.org/
+
+## BioMethod offline reading libraries
+
+- KaTeX 0.16.22 — MIT, Copyright 2013–2020 Khan Academy and other contributors. Project: https://github.com/KaTeX/KaTeX. Local distribution and full license: `../apps/biomethod/www/vendor/katex/`.
+- highlight.js 11.11.1 — BSD 3-Clause, Copyright 2006 Ivan Sagalaev. Project: https://github.com/highlightjs/highlight.js. Local core, R language, theme and full license: `../apps/biomethod/www/vendor/highlight/`.
+
+Each directory includes SOURCE.json recording the pinned npm distribution and its verified package integrity. These assets are served locally; no browser CDN requests are needed. Scientific references are maintained separately in `../content/biomethod/references.json`.

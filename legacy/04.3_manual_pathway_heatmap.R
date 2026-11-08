@@ -276,10 +276,57 @@ block_fun <- function(index, levels) grid::grid.text(labels[as.character(levels[
     fontface = process_font_face, col = process_font_color))
 ra <- ComplexHeatmap::rowAnnotation(Gene = gene_fun, Process = ComplexHeatmap::anno_block(panel_fun = block_fun, width = grid::unit(process_width_cm, "cm")), show_annotation_name = FALSE, gap = grid::unit(annotation_gap_mm, "mm"))
 col_dist <- if (distance_columns %in% c("pearson", "spearman")) function(m) as.dist(1 - cor(t(m), method = distance_columns)) else distance_columns
-ht <- ComplexHeatmap::Heatmap(plot_mat, name = "Relative expression", col = col_fun, na_col = na_color,
-  row_split = process_factor, cluster_rows = FALSE, cluster_row_slices = FALSE, show_row_dend = FALSE,
-  column_split = meta[[group_col]], column_title = levels(meta[[group_col]]), cluster_columns = cluster_columns,
-  cluster_column_slices = FALSE, show_column_dend = show_column_dendrogram, clustering_distance_columns = col_dist,
+ht <- local({
+  style <- get0("wb_style", ifnotfound = list())
+  extent <- get0("wb_cell_extent", ifnotfound = function(...) NULL)
+  reverse_row <- isTRUE(style$reverse_rows)
+  reverse_col <- isTRUE(style$reverse_columns)
+  row_groups <- if (reverse_row) factor(process_factor, levels = rev(levels(process_factor))) else process_factor
+  groups <- meta[[group_col]]
+  if (reverse_col) groups <- factor(groups, levels = rev(levels(groups)))
+  show_row <- isTRUE(style$show_row_tree) && cluster_within_process
+  # 复用“通路 → 方向 → 方向内聚类”的排列；树的显隐不重新选择行顺序。
+  row_tree <- function(m) {
+    indices <- match(rownames(m), rownames(plot_mat))
+    blocks <- if (order_genes_by_direction) lapply(c(1L, 0L, -1L), function(d)
+      indices[gene_direction[indices] == d]) else list(indices)
+    blocks <- Filter(length, blocks)
+    trees <- lapply(blocks, function(index) {
+      if (length(index) == 1L) return(structure(1L, label = rownames(plot_mat)[index],
+        members = 1L, height = 0, leaf = TRUE, class = "dendrogram"))
+      original <- sort(ordered_rows[index])
+      tree <- as.dendrogram(hclust(safe_row_distance(ordering_mat[original, , drop = FALSE],
+        active_distance), method = clustering_method))
+      reorder(tree, gene_delta[match(original, ordered_rows)], agglo.FUN = mean)
+    })
+    # 方向之间的连接仅表示分组，不是额外的统计距离；各方向内部保留真实距离。
+    tree <- Reduce(function(a, b) merge(a, b,
+      height = max(attr(a, "height"), attr(b, "height")) + 1, adjust = "none"), trees)
+    if (reverse_row) tree <- rev(tree)
+    dendrapply(tree, function(node) {
+      if (is.leaf(node)) node[] <- match(attr(node, "label"), rownames(m))
+      node
+    })
+  }
+  column_tree <- function(m) {
+    d <- if (is.function(col_dist)) col_dist(m) else dist(m, method = col_dist)
+    tree <- as.dendrogram(hclust(d, method = clustering_method))
+    if (reverse_col) rev(tree) else tree
+  }
+  ComplexHeatmap::Heatmap(plot_mat, name = "Relative expression", col = col_fun, na_col = na_color,
+  width = extent(style$heat_cell_width, ncol(plot_mat)), height = extent(style$heat_cell_height, nrow(plot_mat)),
+  row_split = row_groups, cluster_rows = if (cluster_within_process) row_tree else FALSE,
+  cluster_row_slices = FALSE, show_row_dend = show_row,
+  clustering_distance_rows = function(matrix) safe_row_distance(matrix, distance_rows),
+  clustering_method_rows = clustering_method,
+  row_order = if (reverse_row && !cluster_within_process) rev(seq_len(nrow(plot_mat))),
+  row_dend_reorder = FALSE,
+  column_order = if (reverse_col && !cluster_columns) rev(seq_len(ncol(plot_mat))),
+  column_dend_reorder = FALSE,
+  column_split = groups, column_title = levels(groups),
+  cluster_columns = if (cluster_columns) column_tree else FALSE,
+  cluster_column_slices = FALSE, show_column_dend = if (is.null(style$show_column_tree)) show_column_dendrogram else style$show_column_tree,
+  clustering_distance_columns = col_dist,
   clustering_method_columns = clustering_method, top_annotation = NULL, right_annotation = ra,
   row_gap = grid::unit(row_gap_mm, "mm"), column_gap = grid::unit(column_gap_mm, "mm"), row_title = NULL, show_row_names = FALSE,
   show_column_names = show_column_names, column_names_rot = column_name_rotation,
@@ -295,6 +342,7 @@ ht <- ComplexHeatmap::Heatmap(plot_mat, name = "Relative expression", col = col_
   show_heatmap_legend = show_heatmap_legend,
   rect_gp = grid::gpar(col = cell_border_color, lwd = cell_border_width),
   use_raster = use_raster_heatmap)
+})
 draw_file <- function(fmt) {
   path <- file.path(output_dir, paste0(project_name, "_Heatmap.", fmt))
   if (fmt == "pdf") pdf(path, image_width, image_height) else png(path, image_width, image_height, units = "in", res = dpi)

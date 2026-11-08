@@ -1,3 +1,8 @@
 *.lnk export-ignore
+/AGENTS.md export-ignore
+/BioMethod.agent export-ignore
+/app/tests export-ignore
+/apps/biomethod/tests export-ignore
+/tests export-ignore
 app/www/vendor/cytoscape.min.js -text
 *.xlsx binary

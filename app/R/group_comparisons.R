@@ -44,6 +44,7 @@ tb_run_comparisons <- function(spec, plan, root, directory) {
   tb_write_reproduce(spec, file.path(directory, "reproduce.R"), root)
   tb_status_write(directory, "completed", 100, sprintf("完成 %d/%d 个比较；比较索引记录每项状态。",
     sum(records$status == "completed"), nrow(records)))
+  tb_save_result_copy(root, directory)
   invisible(output)
 }
 
@@ -70,4 +71,5 @@ tb_redraw_comparisons <- function(spec, root, directory) {
   saveRDS(records, file.path(directory, "batch.rds"))
   tb_write_reproduce(spec, file.path(directory, "reproduce.R"), root)
   tb_status_write(directory, "completed", 100, "已复用各组比较的绘图数据。")
+  tb_save_result_copy(root, directory)
 }

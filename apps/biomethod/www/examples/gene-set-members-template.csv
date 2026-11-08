@@ -1,0 +1,4 @@
+set_id,description,gene_id,species,evidence
+CUSTOM_REVIEWED_SET_V1,na,GENE_A,Homo sapiens,填写DOI或注释来源
+CUSTOM_REVIEWED_SET_V1,na,GENE_B,Homo sapiens,填写DOI或注释来源
+CUSTOM_SECOND_SET_V1,na,GENE_C,Homo sapiens,填写DOI或注释来源

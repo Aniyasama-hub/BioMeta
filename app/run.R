@@ -4,7 +4,7 @@ args <- commandArgs(trailingOnly = TRUE)
 all_args <- commandArgs(trailingOnly = FALSE)
 script <- sub("^--file=", "", all_args[grepl("^--file=", all_args)][1])
 root <- dirname(normalizePath(script, winslash = "/", mustWork = TRUE))
-for (file in c("core.R", "analysis.R", "prepare.R", "pathways.R", "ppi_prepare.R", "style_schema.R", "plots.R")) {
+for (file in c("core.R", "pathway_options.R", "analysis.R", "prepare.R", "pathways.R", "ppi_prepare.R", "style_schema.R", "plots.R")) {
   source(file.path(root, "R", file), encoding = "UTF-8")
 }
 if (length(args) %% 2 != 0) stop("参数须为 --名称 值；参见README。")

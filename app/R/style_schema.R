@@ -36,8 +36,18 @@ tb_style_schema <- function(tool) {
   scatter <- list(point_size = number("散点直径 · mm", 0.2, 16, 0.2),
     point_alpha = number("散点不透明度", 0.05, 1, 0.05), point_shape = select("散点形状", c("圆" = "16", "三角" = "17", "方" = "15", "菱形" = "18")),
     label_size = number("标签字号 · mm", 1, 10, 0.5), plot_theme = select("坐标版式", c("简洁轴线" = "classic", "细网格" = "minimal", "完整边框" = "bw")))
-  heatmap <- list(low = color("低值色"), mid = color("中值色"), high = color("高值色"),
-    z_limit = number("Z-score 色阶上限", 0.1, 20, 0.1), na_color = color("缺失值色"),
+  fill_choices <- c("无填充" = "none", "沿用当前科研配色" = "preset", stats::setNames(names(tb_palettes()), names(tb_palettes())))
+  heatmap <- list(gene_label_fill = select("基因名背景填充", fill_choices),
+    pathway_label_fill = select("通路名背景填充", fill_choices),
+    pathway_font_size = number("通路名字号 · pt", 5, 36),
+    term_wrap = number("通路名每行最多字符", 8, 120),
+    pathway_font_face = select("通路名字形", c("常规" = "plain", "粗体" = "bold", "斜体" = "italic", "粗斜体" = "bold.italic")),
+    pathway_font_color = color("通路名文字颜色"), heat_cell_width = number("色块宽度 · 毫米（0 自动）", 0, 25, 0.2),
+    heat_cell_height = number("色块高度 · 毫米（0 自动）", 0, 25, 0.2),
+    show_row_tree = flag("显示行聚类树"), show_column_tree = flag("显示列聚类树"),
+    reverse_rows = flag("反转行顺序"), reverse_columns = flag("反转列顺序"),
+    low = color("低值色"), mid = color("中值色"), high = color("高值色"),
+    z_limit = number("标准化热图的颜色范围上限", 0.1, 20, 0.1), na_color = color("缺失值色"),
     cell_border = color("单元格边线"), cell_border_width = number("边线粗细", 0, 2, 0.1),
     row_font_size = number("基因 / 行名字号 · pt", 5, 36), column_font_size = number("样本 / 列名字号 · pt", 5, 36),
     column_rotation = number("列名旋转角度", 0, 90, 15), show_gene_names = flag("显示基因 / 行名"),
@@ -52,14 +62,16 @@ tb_style_schema <- function(tool) {
   specific <- switch(tool,
     pca = c(scatter, list(group_a = color("第一组颜色"), group_b = color("第二组颜色"), pca_3d_angle = number("三维观察角度", 10, 80, 5))),
     matrix_pca = c(scatter, list(group_a = color("第一组颜色"), group_b = color("第二组颜色"), pca_3d_angle = number("三维观察角度", 10, 80, 5))),
-    volcano = c(scatter, list(up = color("上调基因"), down = color("下调基因"), neutral = color("不显著基因"),
+    volcano = c(scatter, list(target_label_color = color("目的基因标签颜色"), target_point_color = color("目的基因数据点颜色"), up = color("上调基因"), down = color("下调基因"), neutral = color("不显著基因"),
       threshold_color = color("筛选阈值线"), threshold_width = number("阈值线宽 · mm", 0.1, 2, 0.1))),
-    heatmap = heatmap, matrix_heatmap = heatmap, custom_heatmap = heatmap, manual_heatmap = heatmap,
+    heatmap = heatmap, immune = heatmap, matrix_heatmap = heatmap, custom_heatmap = heatmap, manual_heatmap = heatmap,
     gsva = utils::modifyList(heatmap, list(show_gene_names = flag("显示通路名称"),
       row_font_size = number("通路名字号 · pt", 5, 36),
       term_wrap = number("通路名每行最多字符", 8, 120))),
-    go = list(enrichment_kind = select("展示形式", c("气泡图" = "dot", "条形图" = "bar")),
+    go = list(enrichment_kind = select("展示形式", c("气泡图" = "dot", "条形图" = "bar", "两种都导出" = "both")),
       enrichment_orientation = select("条形方向", c("水平" = "horizontal", "竖直" = "vertical")),
+      enrichment_bar_width = number("统一柱宽", .1, 1, .05),
+      enrichment_bar_length = number("最长柱占坐标轴长度 · %", 20, 100, 5),
       enrichment_low = color("低显著性颜色"), enrichment_high = color("高显著性颜色"),
       enrichment_size_min = number("气泡最小直径 · mm", 1, 10, 0.5), enrichment_size_max = number("气泡最大直径 · mm", 2, 20, 0.5),
       term_wrap = number("通路名称换行宽度 · 字符", 12, 100), point_alpha = number("图元不透明度", 0.1, 1, 0.05)),
@@ -80,6 +92,8 @@ tb_style_schema <- function(tool) {
   if (tool == "kegg") return(tb_style_schema("go"))
   sections <- list("画布与排版" = common, "当前图型" = specific)
   if (tool %in% c("pca", "matrix_pca")) sections$置信与预测区域 <- pca_confidence
+  if (tool %in% c("go", "kegg", "gsva")) sections$目的通路标记 <- list(
+    pathway_target_color = color("名称文字颜色"), pathway_target_fill = color("名称背景色"))
   if (!tool %in% c("circos", "gsea")) sections$图例 <- legend
   sections
 }
@@ -96,6 +110,12 @@ tb_style_defaults <- function() c(tb_legend_defaults(), list(line_width = .8, gr
   group_a = "#426C87", group_b = "#B8523E", threshold_color = "#847D72", threshold_width = 0.5,
   na_color = "#E1DDD3", cell_border = "#FFFFFF", cell_border_width = 0.3,
   row_font_size = 11, column_font_size = 10, column_rotation = 45, show_gene_names = TRUE, heatmap_raster = FALSE,
+  heat_cell_width = 0, heat_cell_height = 0, show_row_tree = FALSE, show_column_tree = FALSE,
+  reverse_rows = FALSE, reverse_columns = FALSE, enrichment_bar_width = .7, enrichment_bar_length = 90,
+  target_label_color = "#C62828", target_point_color = "#F2C94C",
+  pathway_target_color = "#C62828", pathway_target_fill = "transparent",
+  gene_label_fill = "none", pathway_label_fill = "preset", pathway_font_size = 11,
+  pathway_font_face = "plain", pathway_font_color = "#242424",
   enrichment_kind = "dot", enrichment_orientation = "horizontal", enrichment_low = "#B9C8BB", enrichment_high = "#B44A37",
   enrichment_size_min = 3, enrichment_size_max = 9, term_wrap = 38,
   curve_color = "#A44032", curve_width = 0.9, positive_color = "#B8523E", negative_color = "#426C87", rug_color = "#292F2D", rug_width = 0.3,
@@ -114,7 +134,17 @@ tb_palettes <- function() {
   list("静谧 · Quietude" = make("#5B6B70", "#EEE8DA", "#916958"),
        "归乡 · Homecoming" = make("#52664D", "#F3E1C7", "#A05C43"),
        "共生 · Symbiosis" = make("#35396B", "#E8EAD1", "#9E596C"),
-       "赤潮 · Renegade" = make("#493653", "#F5E4DB", "#B8324E"))
+       "赤潮 · Renegade" = make("#493653", "#F5E4DB", "#B8324E"),
+       "日落 · Tol Sunset" = make("#364B9A", "#EAECCC", "#A50026"),
+       "蓝红 · ColorBrewer RdBu" = make("#2166AC", "#F7F7F7", "#B2182B"),
+       "黄棕 · ColorBrewer YlOrBr" = make("#FFFFE5", "#FEC44F", "#662506"),
+       "紫绿黄 · Viridis（连续值）" = c(make("#440154", "#21918C", "#FDE725"),
+         list(colors = c("#440154", "#3B528B", "#21918C", "#5EC962", "#FDE725"))),
+       "蓝灰黄 · Cividis（连续值）" = c(make("#00224E", "#7D7C78", "#FEE838"),
+         list(colors = c("#00224E", "#434E6C", "#7D7C78", "#BCAE6C", "#FEE838"))),
+       "蓝橙 · Okabe–Ito（两组对比）" = make("#0072B2", "#EEEEEE", "#D55E00"),
+       "紫橙 · ColorBrewer PuOr（正负值）" = make("#998EC3", "#F7F7F7", "#F1A340"),
+       "棕绿 · ColorBrewer BrBG（正负值）" = make("#A6611A", "#F5F5F5", "#018571"))
 }
 tb_gradient_colors <- function(style, fallback) {
   value <- style$gradient

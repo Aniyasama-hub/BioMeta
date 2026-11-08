@@ -1,0 +1,237 @@
+[
+  {
+    "id": "pca-2016",
+    "title": "Principal component analysis: a review and recent developments",
+    "authors": "I. T. Jolliffe; J. Cadima",
+    "year": 2016,
+    "journal": "Philosophical Transactions of the Royal Society A",
+    "doi": "10.1098/rsta.2015.0202",
+    "url": "https://doi.org/10.1098/rsta.2015.0202",
+    "summary": "PCA 的综述，解释方差最大化、正交主成分与适用边界。",
+    "articles": [
+      "pca",
+      "pca-code"
+    ],
+    "verified_on": "2026-11-07"
+  },
+  {
+    "id": "deseq2-2014",
+    "title": "Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2",
+    "authors": "M. I. Love; W. Huber; S. Anders",
+    "year": 2014,
+    "journal": "Genome Biology",
+    "doi": "10.1186/s13059-014-0550-8",
+    "url": "https://doi.org/10.1186/s13059-014-0550-8",
+    "summary": "DESeq2 的原始方法论文，介绍计数建模和信息共享估计。",
+    "articles": [
+      "deg",
+      "normalization",
+      "bulk-rnaseq",
+      "deg-code",
+      "normalization-code",
+      "bulk-rnaseq-code"
+    ],
+    "verified_on": "2026-11-08"
+  },
+  {
+    "id": "limma-2015",
+    "title": "limma powers differential expression analyses for RNA-sequencing and microarray studies",
+    "authors": "M. E. Ritchie; B. Phipson; D. Wu; Y. Hu; C. W. Law; W. Shi; G. K. Smyth",
+    "year": 2015,
+    "journal": "Nucleic Acids Research",
+    "doi": "10.1093/nar/gkv007",
+    "url": "https://doi.org/10.1093/nar/gkv007",
+    "summary": "limma 的线性模型、经验贝叶斯与表达分析应用。",
+    "articles": [
+      "limma",
+      "limma-code"
+    ],
+    "verified_on": "2026-11-07"
+  },
+  {
+    "id": "go-2000",
+    "title": "Gene Ontology: tool for the unification of biology",
+    "authors": "M. Ashburner et al.; The Gene Ontology Consortium",
+    "year": 2000,
+    "journal": "Nature Genetics",
+    "doi": "10.1038/75556",
+    "url": "https://doi.org/10.1038/75556",
+    "summary": "GO 的原始资源论文，介绍生物功能的三个注释维度。",
+    "articles": [
+      "go-kegg",
+      "go-kegg-code"
+    ],
+    "verified_on": "2026-11-07"
+  },
+  {
+    "id": "kegg-2000",
+    "title": "KEGG: Kyoto Encyclopedia of Genes and Genomes",
+    "authors": "M. Kanehisa; S. Goto",
+    "year": 2000,
+    "journal": "Nucleic Acids Research",
+    "doi": "10.1093/nar/28.1.27",
+    "url": "https://doi.org/10.1093/nar/28.1.27",
+    "summary": "KEGG 原始资源论文；资源引用与实际统计检验方法应分别记录。",
+    "articles": [
+      "go-kegg",
+      "go-kegg-code"
+    ],
+    "verified_on": "2026-11-07"
+  },
+  {
+    "id": "gsea-2005",
+    "title": "Gene set enrichment analysis: a knowledge-based approach for interpreting genome-wide expression profiles",
+    "authors": "A. Subramanian et al.",
+    "year": 2005,
+    "journal": "Proceedings of the National Academy of Sciences",
+    "doi": "10.1073/pnas.0506580102",
+    "url": "https://doi.org/10.1073/pnas.0506580102",
+    "summary": "GSEA 富集思想的原始论文；当前工作站的软件算法另参考 fgsea 资料。",
+    "articles": [
+      "gsea",
+      "gsea-code"
+    ],
+    "verified_on": "2026-11-07"
+  },
+  {
+    "id": "deseq2-docs",
+    "title": "Analyzing RNA-seq data with DESeq2",
+    "authors": "M. I. Love; S. Anders; W. Huber",
+    "year": null,
+    "journal": "Bioconductor 官方教程",
+    "doi": null,
+    "url": "https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html",
+    "summary": "持续更新的官方教程，阅读时核对自己安装的软件包版本。",
+    "articles": [
+      "pca",
+      "deg",
+      "normalization",
+      "pca-code",
+      "deg-code",
+      "normalization-code"
+    ],
+    "verified_on": "2026-11-08"
+  },
+  {
+    "id": "fgsea-docs",
+    "title": "fgsea: Fast Gene Set Enrichment Analysis",
+    "authors": "Bioconductor / fgsea maintainers",
+    "year": null,
+    "journal": "Bioconductor 官方软件包",
+    "doi": null,
+    "url": "https://bioconductor.org/packages/release/bioc/html/fgsea.html",
+    "summary": "工作站实际调用的预排序 GSEA 实现，应记录已安装版本。",
+    "articles": [
+      "gsea",
+      "gsea-code"
+    ],
+    "verified_on": "2026-11-07"
+  },
+  {
+    "id": "r-prcomp-docs",
+    "title": "prcomp: Principal Components Analysis",
+    "authors": "R Core Team",
+    "year": null,
+    "journal": "R stats 官方文档",
+    "doi": null,
+    "url": "https://stat.ethz.ch/R-manual/R-devel/library/stats/html/prcomp.html",
+    "summary": "R 的 PCA 函数说明，包含中心化、缩放、SVD、样本得分和负荷的返回结构。请结合实际 R 版本阅读。",
+    "articles": [
+      "pca",
+      "pca-code"
+    ],
+    "verified_on": "2026-11-08"
+  },
+  {
+    "id": "go-enrichment-docs",
+    "title": "GO enrichment analysis",
+    "authors": "Gene Ontology Consortium",
+    "year": 2026,
+    "journal": "Gene Ontology official documentation",
+    "doi": "",
+    "url": "https://geneontology.org/docs/go-enrichment-analysis/",
+    "summary": "GO 分类、候选集与背景的官方说明。",
+    "articles": [
+      "go-kegg",
+      "go-kegg-code"
+    ],
+    "verified_on": "2026-11-08"
+  },
+  {
+    "id": "kegg-api-docs",
+    "title": "KEGG API Manual",
+    "authors": "Kanehisa Laboratories",
+    "year": 2026,
+    "journal": "KEGG official documentation",
+    "doi": "",
+    "url": "https://www.kegg.jp/kegg/rest/keggapi.html",
+    "summary": "成员/名称接口与官网机制图 PNG 获取方式。",
+    "articles": [
+      "go-kegg",
+      "go-kegg-code"
+    ],
+    "verified_on": "2026-11-08"
+  },
+  {
+    "id": "annotationdbi-docs",
+    "title": "AnnotationDbi: Manipulation of SQLite-based annotations in Bioconductor",
+    "authors": "H. Pagès; M. Carlson; S. Falcon; N. Li",
+    "year": 2026,
+    "journal": "Bioconductor",
+    "doi": "10.18129/B9.bioc.AnnotationDbi",
+    "url": "https://bioconductor.org/packages/AnnotationDbi",
+    "summary": "编号查询及多重映射；实际版本以当前 R 环境为准。",
+    "articles": [
+      "go-kegg",
+      "reactome",
+      "go-kegg-code",
+      "reactome-code"
+    ],
+    "verified_on": "2026-11-08"
+  },
+  {
+    "id": "reactome-2024",
+    "title": "The Reactome Pathway Knowledgebase 2024",
+    "authors": "M. Milacic et al.",
+    "year": 2024,
+    "journal": "Nucleic Acids Research",
+    "doi": "10.1093/nar/gkad1025",
+    "url": "https://doi.org/10.1093/nar/gkad1025",
+    "summary": "Reactome 知识库、反应与通路组织的资源论文。",
+    "articles": [
+      "reactome",
+      "reactome-code"
+    ],
+    "verified_on": "2026-11-08"
+  },
+  {
+    "id": "reactome-downloads",
+    "title": "Reactome data downloads",
+    "authors": "Reactome",
+    "year": 2026,
+    "journal": "Reactome official documentation",
+    "doi": "",
+    "url": "https://reactome.org/download-data",
+    "summary": "All Levels 映射及官方开放数据下载入口。",
+    "articles": [
+      "reactome",
+      "reactome-code"
+    ],
+    "verified_on": "2026-11-08"
+  },
+  {
+    "id": "gmt-format-docs",
+    "title": "Data Formats: GMT — Gene Matrix Transposed",
+    "authors": "GSEA / MSigDB team",
+    "year": 2026,
+    "journal": "GSEA-MSigDB Documentation",
+    "doi": "",
+    "url": "https://docs.gsea-msigdb.org/GSEA/Data_Formats/",
+    "summary": "GMT 的制表符分隔、一行一个集合以及名称、描述、成员字段的官方约定。",
+    "articles": [
+      "gmt",
+      "gmt-code"
+    ],
+    "verified_on": "2026-11-09"
+  }
+]

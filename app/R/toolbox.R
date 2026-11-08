@@ -9,6 +9,8 @@ tb_pathway_sources <- function(tool) {
 toolbox_source <- Filter(Negate(is.null), lapply(sys.frames(), function(frame) frame$ofile))
 if (length(toolbox_source)) source(file.path(dirname(tail(toolbox_source, 1L)[[1L]]),
   "style_schema.R"), encoding = "UTF-8")
+if (length(toolbox_source)) for (module in c("gene_mapping.R", "job_diagnostics.R", "pathway_options.R", "annotated_heatmap.R", "portable_export.R"))
+  source(file.path(dirname(tail(toolbox_source, 1L)[[1L]]), module), encoding = "UTF-8")
 # 本地工具箱公共接口；加载本文件不会拟合模型、联网或生成科研图片。
 `%||%` <- function(x, y) if (is.null(x)) y else x
 if (!exists(".tb_jobs", inherits = FALSE)) .tb_jobs <- new.env(parent = emptyenv())
@@ -34,7 +36,7 @@ tb_tool_catalog <- function() {
       "由差异分析输出的完整结果表生成火山图。",
       "读取 VST 等处理后表达矩阵，可按差异结果或高变基因绘制。 ",
       "从处理后表达矩阵按目标基因列表绘制。 ",
-      "保留 Excel GeneAnnotation 与一基因多通路布局。",
+      "自动匹配目的通路，或上传 CSV / Excel 注释；支持一基因多通路布局。",
       "本地人或小鼠 GO 注释或用户提供的 GO GMT；记录来源。",
       "使用有明确来源和版本的本地 KEGG GMT。",
       "完整有效 Wald stat 排序；在整份 GMT 范围检验。",
@@ -59,7 +61,7 @@ tb_default_settings <- function(project_root) {
       counts = "",
       groups = "",
       targets = "",
-      annotation = "",
+      annotation = "", volcano_targets = "", pathway_names = "",
       deg = "",
       gmt = "", nodes = "", edges = "", matrix = "", chromosomes = "", features = "", links = ""), stats::setNames(rep(list(""), 12), tb_panel_fields(12))),
     params = list(downstream_input = FALSE, panel_count = 4, panel_columns = 0, panel_trim = 3, immune_source = "auto",
@@ -67,9 +69,12 @@ tb_default_settings <- function(project_root) {
       kmeans_scale = TRUE, beeswarm_log = FALSE, beeswarm_box = TRUE, radar_normalize = TRUE,
       control = "Control", treatment = "Treatment", group_mode = "pair", group_subset = character(), model_groups = character(), min_count = 10, min_samples = 3,
       alpha = 0.05, ora_fdr = 0.05, padj = 0.05, log2fc = 1, pca_top = 500, pca_scale = FALSE,
-      heatmap_top = 50, heatmap_mode = "deg", row_scale = TRUE,
+      heatmap_top = 50, heatmap_mode = "deg", heatmap_kind = "expression", row_scale = TRUE,
+      target_text = "", target_pathways = "", target_pathway_input = "auto", annotation_input = "auto",
+      ora_filter_mode = "auto", ora_p_column = "", ora_effect_column = "", ora_result_metric = "padj",
+      go_output_scope = "both", kegg_maps = "displayed", annotation_mode = "manual", annotation_source = "go", annotation_terms = "", pathway_cluster = TRUE,
       cluster_rows = TRUE, cluster_columns = FALSE, column_cluster_mode = "within", distance = "pearson", linkage = "complete",
-      labels = FALSE, direction = "all", gmt_id_type = "SYMBOL", database_version = "",
+      gene_id_column = "", gene_name_column = "", labels = FALSE, direction = "all", gmt_id_type = "SYMBOL", database_version = "",
       go_ontology = "BP", ppi_score = 0.7, ppi_require_edges = FALSE, ppi_reference = FALSE, matrix_transform = "none", custom_transform = "log2",
       matrix_use_groups = FALSE, network_mode = "files", network_layout = "fr", network_score_scale = "auto",
       log_pseudocount = 1, use_batch = FALSE, covariates = "", min_set_size = 10,
@@ -84,7 +89,7 @@ tb_default_settings <- function(project_root) {
 }
 
 tb_dependency_report <- function() {
-  packages <- c("shiny", "processx", "jsonlite", "digest", "zip", "rlang", "DESeq2",
+  packages <- c("shiny", "processx", "jsonlite", "digest", "zip", "rlang", "markdown", "DESeq2",
                 "SummarizedExperiment", "ggplot2", "ggrepel", "scatterplot3d",
                 "ComplexHeatmap", "circlize", "svglite", "readxl", "clusterProfiler",
                 "org.Hs.eg.db", "org.Mm.eg.db", "GO.db", "AnnotationDbi", "fgsea", "BiocParallel",
@@ -97,7 +102,7 @@ tb_dependency_report <- function() {
                error = function(e) NA_character_)
   }, character(1))
   data.frame(package = packages, installed = !is.na(version), version = version,
-             role = c(rep("界面 / 任务 / 输出", 6), rep("按所选分析功能加载", length(packages) - 6)),
+             role = c(rep("界面 / 知识 / 任务 / 输出", 7), rep("按所选分析功能加载", length(packages) - 7)),
              stringsAsFactors = FALSE)
 }
 
@@ -141,6 +146,7 @@ tb_read_preview <- function(path, n = 200) tb_with_input(path, {
 tb_normalize_spec <- function(spec, root) {
   defaults <- tb_default_settings(dirname(root))
   if (!is.list(spec) || !spec$tool %in% tb_tool_catalog()$id) stop("请选择有效工具。")
+  if (spec$tool == "go" && is.null(spec$params$pathway_top)) spec$params$pathway_top <- 5L
   spec$inputs <- utils::modifyList(lapply(defaults$inputs, function(x) ""), spec$inputs %||% list())
   for (field in c("params", "style")) {
     spec[[field]] <- utils::modifyList(defaults[[field]], spec[[field]] %||% list())
@@ -153,6 +159,8 @@ tb_normalize_spec <- function(spec, root) {
     spec$params$pathway_source <- source
     if (source != "custom") spec$inputs$gmt <- ""
   }
+  if (spec$tool == "go" && spec$params$go_output_scope %in% c("both", "combined"))
+    spec$params$go_ontology <- c("BP", "CC", "MF")
   if (spec$tool %in% tb_pathway_tools && spec$params$pathway_source == "go")
     spec$params$go_ontology <- tb_go_ontologies(spec$params$go_ontology)
   if (spec$tool == "figure_layout") spec$style <- tb_figure_paper(spec$style)
@@ -167,10 +175,14 @@ tb_normalize_spec <- function(spec, root) {
   spec
 }
 
+tb_annotation_inputs <- function(params) {
+  if (identical(params$annotation_mode, "auto")) c("pathway_names", if (identical(params$annotation_source, "custom")) "gmt") else "annotation"
+}
+
 tb_processed_tools <- c("heatmap", "custom_heatmap", "manual_heatmap", "go", "kegg", "gsea", "gsva")
 
-tb_use_processed <- function(spec) isTRUE(spec$params$downstream_input) || nzchar(spec$inputs$matrix) ||
-  (spec$tool %in% c("go", "kegg", "gsea") && nzchar(spec$inputs$deg))
+tb_use_processed <- function(spec) isTRUE(spec$params$downstream_input) || nzchar(spec$inputs$matrix %||% "") ||
+  (spec$tool %in% c("go", "kegg", "gsea") && nzchar(spec$inputs$deg %||% ""))
 
 tb_active_inputs <- function(spec) {
   if (spec$tool %in% tb_general_tools) return("matrix")
@@ -180,12 +192,14 @@ tb_active_inputs <- function(spec) {
     figure_layout = tb_panel_fields(spec$params$panel_count),
     immune = c("matrix", if (spec$params$immune_source == "custom") "gmt"),
     circos = c("chromosomes", "features", "links"),
-    volcano = if (tb_use_processed(spec) || nzchar(spec$inputs$deg)) "deg" else c("counts", "groups"),
-    heatmap = if (tb_use_processed(spec)) c("matrix", "groups", if (spec$params$heatmap_mode == "deg") "deg") else c("counts", "groups"),
+    volcano = c(if (tb_use_processed(spec) || nzchar(spec$inputs$deg)) "deg" else c("counts", "groups"), "volcano_targets"),
+    heatmap = c(if (tb_use_processed(spec)) c("matrix", "groups", if (spec$params$heatmap_mode == "deg" || spec$params$heatmap_kind == "annotated") "deg") else c("counts", "groups"),
+      if (spec$params$heatmap_kind == "annotated") tb_annotation_inputs(spec$params)),
     custom_heatmap = c(if (tb_use_processed(spec)) "matrix" else "counts", "groups", "targets"),
-    manual_heatmap = c(if (tb_use_processed(spec)) c("matrix", "deg") else "counts", "groups", "annotation"),
-    go =, kegg =, gsea = c(if (tb_use_processed(spec)) "deg" else c("counts", "groups"), "gmt"),
-    gsva = c(if (tb_use_processed(spec)) "matrix" else "counts", "groups", "gmt"),
+    manual_heatmap = c(if (tb_use_processed(spec)) c("matrix", "deg") else "counts", "groups", tb_annotation_inputs(spec$params)),
+    go =, kegg = c(if (tb_use_processed(spec)) "deg" else c("counts", "groups"), "gmt", "pathway_names"),
+    gsea = c(if (tb_use_processed(spec)) "deg" else c("counts", "groups"), "gmt"),
+    gsva = c(if (tb_use_processed(spec)) "matrix" else "counts", "groups", "gmt", "pathway_names"),
     network = switch(spec$params$network_mode, files = c("nodes", "edges"), results = c("deg", "edges"),
       c("counts", "groups", "edges")), c("counts", "groups"))
 }
@@ -193,6 +207,7 @@ tb_active_inputs <- function(spec) {
 tb_validate_inputs <- function(spec, root) {
   spec <- tb_normalize_spec(spec, root)
   needed <- tb_active_inputs(spec)
+  needed <- setdiff(needed, c("volcano_targets", "pathway_names"))
   if (spec$tool == "circos") needed <- "chromosomes"
   if (spec$tool %in% tb_pathway_tools && spec$params$pathway_source != "custom") needed <- setdiff(needed, "gmt")
   if (spec$tool == "network" && spec$params$network_mode %in% c("deg", "results") &&
@@ -210,16 +225,18 @@ tb_validate_inputs <- function(spec, root) {
   for (field in intersect(needed, c("counts", "groups", "matrix", "deg", "targets", "chromosomes"))) {
     tb_read_preview(spec$inputs[[field]], n = 0L)
   }
-  if ("annotation" %in% needed) {
-    path <- spec$inputs$annotation
-    if (!requireNamespace("readxl", quietly = TRUE))
-      tb_fail("BW-R03", "读取 Excel 注释需要 readxl。", path)
-    header <- tb_with_input(path, names(readxl::read_excel(path, sheet = "GeneAnnotation", n_max = 0)),
-      code = "BW-I02")
-    missing <- setdiff(c("GeneKey", "Pathway"), header)
-    if (length(missing)) tb_fail("BW-I03", paste("GeneAnnotation 缺少列", paste(missing, collapse = "、")), path,
-      "请检查工作表名称 GeneAnnotation，并补齐必需列。")
+  if (spec$tool == "volcano") tb_read_items(spec$params$target_text, spec$inputs$volcano_targets)
+  if (spec$tool %in% c("go", "kegg", "gsva")) tb_pathway_input(spec)
+  annotated <- spec$tool == "manual_heatmap" || (spec$tool == "heatmap" && spec$params$heatmap_kind == "annotated")
+  if (annotated) {
+    if (!spec$params$annotation_mode %in% c("auto", "manual")) stop("请选择自动或手动注释。")
+    if (spec$params$annotation_mode == "auto") {
+      if (!spec$params$annotation_source %in% c("go", "kegg", "reactome", "custom")) stop("请选择有效的通路注释库。")
+      if (!length(tb_pathway_input(spec, TRUE)))
+        stop("请输入或上传目的通路名称 / ID，每行一项。")
+    }
   }
+  if ("annotation" %in% needed) tb_with_input(spec$inputs$annotation, tb_read_annotation(spec$inputs$annotation))
   if ("nodes" %in% needed) {
     header <- tolower(names(tb_read_preview(spec$inputs$nodes, n = 0)))
     if (!any(c("id", "string_id", "gene_id", "name", "node", "protein_id") %in% header)) tb_fail("BW-I03", "Node 表需有 id / STRING_id / gene_id 等唯一标识列。", spec$inputs$nodes)
@@ -240,9 +257,18 @@ tb_validate_inputs <- function(spec, root) {
     stop("出图条目数须为正整数。")
   if (spec$tool %in% c("go", "kegg") && (!is.finite(p$ora_fdr) || p$ora_fdr <= 0 || p$ora_fdr > 1))
     stop("通路 FDR 阈值须在 (0, 1]。")
-  if (spec$tool == "gsea" && (!p$gsea_sort %in% c("padj", "pval") || !p$gsea_order %in% c("asc", "desc") ||
+  if (spec$tool == "gsea" && (!p$gsea_sort %in% c("padj", "pval", "pvalue", "FDR") || !p$gsea_order %in% c("asc", "desc") ||
       !is.finite(p$pathway_top) || p$pathway_top != floor(p$pathway_top) || p$pathway_top < 1 || p$pathway_top > 100))
     stop("请设置有效的 GSEA 排序和 1–100 张曲线。")
+  if (spec$tool == "go" && !p$go_output_scope %in% c("both", "combined", "single")) stop("请选择有效的 GO 出图内容。")
+  if (spec$tool == "kegg" && !p$kegg_maps %in% c("off", "displayed", "significant")) stop("请选择有效的机制图导出方式。")
+  if (spec$tool %in% c("go", "kegg") && !p$ora_result_metric %in% c("padj", "FDR", "pvalue")) stop("请选择富集结果保留指标。")
+  if (spec$tool %in% tb_pathway_tools && !p$gsea_order %in% c("asc", "desc")) stop("请选择通路排序方向。")
+  if (spec$tool %in% tb_pathway_tools) {
+    metrics <- c("pvalue", "pval", "padj", "FDR",
+      if (spec$tool %in% c("go", "kegg")) c("gene_ratio", "count"), if (spec$tool == "gsva") "logFC")
+    if (!p$gsea_sort %in% metrics) stop("所选通路排序指标不适用于当前工具。")
+  }
   if (heatmap && !p$column_cluster_mode %in% c("within", "global")) stop("无效的列聚类范围。")
   if (heatmap && p$linkage == "ward.D2" && p$distance != "euclidean") stop("Ward.D2 必须搭配欧氏距离。")
   if (spec$tool %in% c("pca", "matrix_pca") && p$pca_top < 2) stop("PCA 至少需要两个特征。")
@@ -275,6 +301,9 @@ tb_validate_style <- function(spec) {
     definition <- schema[[name]]
     value <- spec$style[[name]]
     if (definition$type == "number" && (length(value) != 1L || !is.finite(value) || value < definition$min || value > definition$max)) stop("样式参数范围不合法：", definition$label)
+    if (name %in% c("pathway_target_color", "pathway_target_fill") &&
+        !grepl("^#[0-9A-Fa-f]{6}$", value) && !(name == "pathway_target_fill" && value == "transparent"))
+      stop("目的通路颜色请填 # 加 6 位十六进制颜色；背景也可填 transparent。")
     if (definition$type == "color") tryCatch(grDevices::col2rgb(value), error = function(e) stop("无效颜色：", definition$label))
     if (definition$type == "select" && !as.character(value) %in% unname(definition$choices)) stop("无效选项：", definition$label)
   }
@@ -283,7 +312,7 @@ tb_validate_style <- function(spec) {
     if (spec$style$width * spec$style$height * spec$style$dpi^2 > 1e8) stop("位图超过一亿像素，请减小尺寸或 DPI。")
   }
   if (spec$tool == "network" && spec$style$node_size_min > spec$style$node_size_max) stop("最小节点不能大于最大节点。")
-  if (spec$tool %in% c("go", "kegg") && spec$style$enrichment_kind == "dot" && spec$style$enrichment_size_min > spec$style$enrichment_size_max) stop("最小气泡不能大于最大气泡。")
+  if (spec$tool %in% c("go", "kegg") && spec$style$enrichment_kind %in% c("dot", "both") && spec$style$enrichment_size_min > spec$style$enrichment_size_max) stop("最小气泡不能大于最大气泡。")
   invisible(TRUE)
 }
 
@@ -343,6 +372,7 @@ tb_launch_job <- function(spec, root, redraw_from = NULL) {
   }
   saveRDS(spec, file.path(directory, "request.rds"))
   jsonlite::write_json(spec, file.path(directory, "parameters.json"), pretty = TRUE, auto_unbox = TRUE)
+  tb_capture_job_source(root, directory)
   tb_status_write(directory, "queued", summary = "已保存输入与参数，等待 R 后台进程。")
   executable <- file.path(R.home("bin"), if (.Platform$OS.type == "windows") "Rscript.exe" else "Rscript")
   log <- file.path(directory, "job.log")
@@ -401,17 +431,61 @@ tb_list_runs <- function(root) {
   do.call(rbind, records)
 }
 
-tb_write_reproduce <- function(spec, path, root) {
-  # R 配方是显式用户下载的可执行脚本；启动界面不会执行它。
-  lines <- c("# 本地工具箱复现配方；运行会实际执行所选分析。",
-             paste0("root <- ", encodeString(normalizePath(root, winslash = "/"), quote = '"')),
-             "source(file.path(root, 'R', 'toolbox.R'), encoding = 'UTF-8')",
-             paste0("spec <- ", paste(capture.output(dput(spec)), collapse = "\n")),
-             "job <- tb_launch_job(spec, root, redraw_from = spec$redraw_from)", "job$process$wait()",
-             "state <- tb_read_job(job$directory)", "if (state$status != 'completed') stop(state$error %||% state$summary)",
-             "cat('结果目录：', job$directory, '\\n')")
-  writeLines(lines, path, useBytes = TRUE)
-  invisible(path)
+tb_write_reproduce <- function(spec, path, root, portable = identical(basename(path), "reproduce.R")) {
+  tb_portable_write(spec, path, root, portable)
+}
+
+tb_output_name <- function(path, tool) {
+  name <- basename(path)
+  stems <- c(pca = "pca", volcano = "volcano_map", heatmap = "heatmap",
+    custom_heatmap = "target_gene_heatmap", manual_heatmap = "annotated_heatmap",
+    matrix_heatmap = "matrix_heatmap", matrix_pca = "matrix_pca", go = "go_enrichment",
+    kegg = "kegg_enrichment", gsva = "gsva_heatmap", gsea = "gsea_enrichment",
+    network = "ppi_network", immune = "immune_scores", figure_layout = "figure_layout")
+  stem <- unname(stems[tool])
+  if (is.na(stem)) stem <- tool
+  if (tool == "pca" && basename(dirname(path)) == "pca_loadings") stem <- "pca_loadings"
+  if (tool == "volcano" && basename(dirname(path)) %in% c("horizontal", "vertical"))
+    stem <- paste0("volcano_", basename(dirname(path)))
+  if (tool == "gsea" && grepl("^gsea-[0-9]+$", basename(dirname(path))))
+    stem <- paste0(stem, "_", sub("^gsea-", "", basename(dirname(path))))
+  if (grepl("^figure[.](png|svg|tiff|pdf)$", name, ignore.case = TRUE))
+    return(paste0(stem, ".", tools::file_ext(name)))
+  if (identical(name, "plot_data.csv")) return(paste0(stem, "_plot_data.csv"))
+  # 旧任务和历史下载也经过同一命名入口；保留比较子目录，避免多组覆盖。
+  if (grepl("_Heatmap[.](png|svg|tiff|pdf)$", name, ignore.case = TRUE))
+    return(paste0(stem, ".", tools::file_ext(name)))
+  if (grepl("_PlotData[.]csv$", name, ignore.case = TRUE)) return(paste0(stem, "_plot_data.csv"))
+  if (grepl("_PlotMatrix[.]csv$", name, ignore.case = TRUE)) return(paste0(stem, "_expression_matrix.csv"))
+  name
+}
+
+tb_job_request <- function(directory) {
+  tryCatch(readRDS(file.path(directory, "request.rds")), error = function(e) list())
+}
+
+tb_archive_name <- function(directory, project = "biometa") {
+  project <- tb_job_request(directory)$project_name %||% project
+  project <- gsub('[<>:"/|?*]|[[:cntrl:]]', "_", gsub(intToUtf8(92), "_", project, fixed = TRUE))
+  timestamp <- format(Sys.time(), "%Y%m%d%H%M%S", tz = "Asia/Shanghai")
+  paste0(project, "_", timestamp, ".zip")
+}
+
+tb_name_outputs <- function(directory, tool) {
+  files <- list.files(directory, recursive = TRUE, full.names = TRUE)
+  for (file in files) {
+    name <- tb_output_name(file, tool)
+    target <- file.path(dirname(file), name)
+    if (identical(name, basename(file))) next
+    if (!file.copy(file, target, overwrite = TRUE)) stop("无法命名输出文件：", name)
+    unlink(file)
+  }
+  invisible(NULL)
+}
+
+tb_export_target <- function(name, tool) {
+  renamed <- tb_output_name(name, tool)
+  if (dirname(name) == ".") renamed else file.path(dirname(name), renamed)
 }
 
 tb_zip_results <- function(directory, file) {
@@ -425,21 +499,26 @@ tb_zip_results <- function(directory, file) {
   for (folder in c(main, extra)) dir.create(file.path(stage, folder))
   output <- file.path(directory, "outputs")
   files <- list.files(output, recursive = TRUE)
+  tool <- tb_job_request(directory)$tool %||% "analysis"
   for (name in files) {
-    target <- file.path(stage, if (tb_plot_file(name)) main else extra, name)
+    target <- file.path(stage, if (tb_plot_file(name)) main else extra, tb_export_target(name, tool))
     dir.create(dirname(target), recursive = TRUE, showWarnings = FALSE)
     if (!file.copy(file.path(output, name), target)) stop("结果打包失败：", name)
   }
-  extras <- file.path(directory, c("parameters.json", "job.log", "reproduce.R"))
+  reproduction <- file.path(stage, "03_独立R脚本与输入")
+  dir.create(reproduction)
+  root <- dirname(dirname(dirname(dirname(directory))))
+  tb_write_reproduce(tb_job_request(directory), file.path(reproduction, "reproduce.R"), root, portable = TRUE)
+  extras <- file.path(directory, c("parameters.json", "job.log"))
   file.copy(extras[file.exists(extras)], file.path(stage, extra))
-  zip::zipr(file, c(main, extra), root = stage, include_directories = TRUE)
+  zip::zipr(file, c(main, extra, basename(reproduction)), root = stage, include_directories = TRUE)
   invisible(file)
 }
 
 tb_plot_file <- function(path) {
   name <- basename(path)
   grepl("[.](png|svg|tiff|pdf|html|js)$", name, ignore.case = TRUE) ||
-    grepl("(^plot_data|_PlotData|_PlotMatrix|^loading_plot_data)[.]csv$", name, ignore.case = TRUE) ||
+    grepl("(^plot_data|_plot_data|_PlotData|_PlotMatrix|^loading_plot_data)[.]csv$", name, ignore.case = TRUE) ||
     name %in% c("CYTOSCAPE-LICENSE.txt", "ppi_nodes.csv", "ppi_edges.csv", "features.csv", "links.csv", "venn_regions.csv", "figure_panels.csv", "gsea_plot_index.csv")
 }
 
@@ -463,8 +542,8 @@ tb_project_inputs <- function(path) {
 }
 
 tb_panel_fields <- function(count) {
-  if (length(count) != 1L || !is.finite(count) || count != floor(count) || count < 2L || count > 12L)
-    stop("图片数量须为 2–12 的整数。")
+  if (length(count) != 1L || !is.finite(count) || count != floor(count) || count < 1L || count > 12L)
+    stop("图片数量须为 1–12 的整数。")
   sprintf("panel_%02d", seq_len(count))
 }
 
@@ -561,4 +640,27 @@ tb_go_ontologies <- function(value) {
   if ("ALL" %in% value) return(supported)
   if (!length(value) || !all(value %in% supported)) stop("请至少选择一个 GO 分类（BP、CC 或 MF）。")
   supported[supported %in% value]
+}
+
+# Explicit selections override defaults. Never silently guess an arbitrary column.
+tb_resolve_gene_columns <- function(data, params = list()) {
+  id <- params$gene_id_column %||% ""
+  name <- params$gene_name_column %||% ""
+  if (!nzchar(id)) id <- intersect(c("gene_id", "rank_id", "ENSEMBL", "ensembl_id", "ENTREZID", "GeneID", "ID"), names(data))[1L]
+  if (is.na(id) || !id %in% names(data)) stop("未找到基因编号列，请在参数中明确选择。")
+  if (identical(name, "__id_only__")) name <- NA_character_
+  else if (!nzchar(name)) name <- intersect(c("gene_name", "SYMBOL", "symbol", "GeneSymbol", "gene_symbol"), names(data))[1L]
+  if (!is.na(name) && !name %in% names(data)) stop("所选基因名称映射列不存在。")
+  data$gene_id <- trimws(as.character(data[[id]]))
+  data$gene_name <- if (is.na(name)) data$gene_id else trimws(as.character(data[[name]]))
+  missing <- is.na(data$gene_name) | !nzchar(data$gene_name)
+  data$gene_name[missing] <- data$gene_id[missing]
+  if (anyNA(data$gene_id) || any(!nzchar(data$gene_id)) || anyDuplicated(data$gene_id)) stop("编号列必须非空且唯一；请先处理重复编号与歧义映射。")
+  data
+}
+
+tb_ui_ids <- function(node) {
+  if (inherits(node, "shiny.tag")) return(c(node$attribs$id, unlist(lapply(node$children, tb_ui_ids), use.names = FALSE)))
+  if (is.list(node)) return(unlist(lapply(node, tb_ui_ids), use.names = FALSE))
+  character()
 }

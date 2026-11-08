@@ -1,0 +1,20 @@
+{
+  "name": "biometa Research Platform",
+  "version": "0.2.0-beta.1",
+  "projects": [
+    {
+      "id": "workstation",
+      "name": "生信分析工作站",
+      "name_en": "biometa",
+      "stage": "Beta",
+      "route": "/workstation"
+    },
+    {
+      "id": "biomethod",
+      "name": "生信方法与知识库",
+      "name_en": "BioMethod",
+      "stage": "Beta",
+      "route": "/biomethod"
+    }
+  ]
+}

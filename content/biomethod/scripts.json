@@ -1,0 +1,286 @@
+[
+  {
+    "id": "pca-prepare",
+    "title": "PCA 计算与样本坐标",
+    "path": "app/R/prepare.R",
+    "symbol": "prepare_bundle",
+    "articles": [
+      "pca",
+      "pca-code"
+    ],
+    "inputs": [
+      "处理后的表达矩阵",
+      "PCA 高变基因数与缩放参数"
+    ],
+    "outputs": [
+      "样本坐标",
+      "方差解释率",
+      "负荷矩阵"
+    ],
+    "dependencies": [
+      "stats"
+    ],
+    "errors": [
+      "高变基因不足",
+      "矩阵方向或缺失值问题"
+    ],
+    "max_lines": 95,
+    "parameters": [
+      "pca_top（选择层 pca_top_genes）：参与 PCA 的高变基因数，界面默认 500。",
+      "pca_scale：是否按基因缩放，默认关闭；中心化开启。"
+    ]
+  },
+  {
+    "id": "pca-render",
+    "title": "PCA 图形绘制",
+    "path": "app/R/plots.R",
+    "symbol": ".plot_pca",
+    "articles": [
+      "pca",
+      "pca-code"
+    ],
+    "inputs": [
+      "已计算 PCA 坐标与样式"
+    ],
+    "outputs": [
+      "PCA 图形对象"
+    ],
+    "dependencies": [
+      "ggplot2"
+    ],
+    "errors": [
+      "坐标列缺失",
+      "图例与分组名称不匹配"
+    ],
+    "max_lines": 95,
+    "parameters": [
+      "point_size / point_alpha：点大小与不透明度。",
+      "legend_position：图例位置；这些参数只影响绘图。"
+    ]
+  },
+  {
+    "id": "count-model",
+    "title": "DESeq2 模型与 VST",
+    "path": "app/R/analysis.R",
+    "symbol": "analyze_dataset",
+    "articles": [
+      "deg",
+      "normalization",
+      "deg-code",
+      "normalization-code"
+    ],
+    "inputs": [
+      "原始整数 Count",
+      "分组与设计"
+    ],
+    "outputs": [
+      "模型对象",
+      "完整 DEG",
+      "VST 矩阵"
+    ],
+    "dependencies": [
+      "DESeq2",
+      "SummarizedExperiment"
+    ],
+    "errors": [
+      "零文库样本",
+      "低表达过滤后不足",
+      "设计矩阵不满秩"
+    ],
+    "max_lines": 95,
+    "parameters": [
+      "min_count / min_samples：低表达过滤计数下限和样本数。",
+      "fit_type：离散度拟合；use_batch / covariates：由设计配置纳入模型。"
+    ]
+  },
+  {
+    "id": "deg-results",
+    "title": "差异结果提取",
+    "path": "app/R/analysis.R",
+    "symbol": "extract_degs",
+    "articles": [
+      "deg",
+      "deg-code"
+    ],
+    "inputs": [
+      "DESeq2 模型",
+      "指定对比"
+    ],
+    "outputs": [
+      "完整差异结果表"
+    ],
+    "dependencies": [
+      "DESeq2"
+    ],
+    "errors": [
+      "对比条件不存在"
+    ],
+    "max_lines": 95,
+    "parameters": [
+      "contrast：实验组相对对照组。",
+      "alpha / independent_filtering / cooks_cutoff：结果提取与异常值处理。",
+      "shrink：none 或 normal；收缩值单独保存，不覆盖原始 log2FC。"
+    ]
+  },
+  {
+    "id": "ora-statistics",
+    "title": "ORA 背景与候选统计",
+    "path": "app/R/pathways.R",
+    "symbol": ".ora_statistics",
+    "articles": [
+      "go-kegg",
+      "go-kegg-code"
+    ],
+    "inputs": [
+      "完整 DEG",
+      "基因映射",
+      "GMT 与筛选参数"
+    ],
+    "outputs": [
+      "通路统计",
+      "实际候选和受检背景"
+    ],
+    "dependencies": [
+      "clusterProfiler"
+    ],
+    "errors": [
+      "ID 未映射",
+      "候选或背景为空"
+    ],
+    "max_lines": 95,
+    "parameters": [
+      "padj 与变化幅度：候选基因筛选。",
+      "ora_padj：通路校正阈值；min/max set size：匹配后的基因集大小范围。"
+    ]
+  },
+  {
+    "id": "gsea-run",
+    "title": "预排序 GSEA 执行",
+    "path": "app/R/pathways.R",
+    "symbol": ".run_gsea",
+    "articles": [
+      "gsea",
+      "gsea-code"
+    ],
+    "inputs": [
+      "完整排名统计量",
+      "GMT"
+    ],
+    "outputs": [
+      "GSEA 结果和排序"
+    ],
+    "dependencies": [
+      "fgsea"
+    ],
+    "errors": [
+      "有效排序不足",
+      "基因集匹配不足"
+    ],
+    "max_lines": 95,
+    "parameters": [
+      "stat：完整有效的有方向统计量，不能先按 DEG 阈值筛短。",
+      "min/max set size：基因集大小；排序与指定条目控制展示。"
+    ]
+  },
+  {
+    "id": "bulk-workflow",
+    "title": "Bulk 逐步分析组织",
+    "path": "app/R/bulk_workflow.R",
+    "symbol": "tb_bulk_spec",
+    "articles": [
+      "bulk-rnaseq",
+      "bulk-rnaseq-code"
+    ],
+    "inputs": [
+      "流程状态",
+      "审核后的步骤"
+    ],
+    "outputs": [
+      "当前步骤执行配置"
+    ],
+    "dependencies": [
+      "base"
+    ],
+    "errors": [
+      "未确认上游结果"
+    ],
+    "max_lines": 95,
+    "parameters": [
+      "flow$step：当前审核步骤。",
+      "flow$params：共享物种、对比和模型配置；函数输出当前步骤的执行规范。"
+    ]
+  },
+  {
+    "id": "example-preparation",
+    "title": "九套示例准备与差异表",
+    "path": "app/examples/prepare-tb-lung.R",
+    "symbol": null,
+    "articles": [
+      "limma",
+      "limma-code"
+    ],
+    "inputs": [
+      "指定来源的九套 GEO 数据目录"
+    ],
+    "outputs": [
+      "清洗输入",
+      "完整示例 DEG",
+      "方法记录"
+    ],
+    "dependencies": [
+      "DESeq2",
+      "limma",
+      "jsonlite"
+    ],
+    "errors": [
+      "源文件缺失",
+      "样本分组不匹配"
+    ],
+    "max_lines": 95,
+    "parameters": [
+      "脚本命令行参数：来源目录、输出目录。",
+      "默认过滤与模型参数见脚本顶部；此脚本用于生成内置示例差异表。"
+    ]
+  },
+  {
+    "id": "public-annotation",
+    "title": "公共注释的编号映射与本地 GMT",
+    "path": "app/R/public_pathways.R",
+    "symbol": "tb_public_pathways",
+    "max_lines": 105,
+    "language": "r",
+    "summary": "读取 GO、KEGG、Reactome 当前实际来源，核对编号并生成分析 GMT 与可追溯元数据。",
+    "inputs": [
+      "物种、注释来源",
+      "唯一 gene_id 与基因名称",
+      "当前注释包或缓存"
+    ],
+    "outputs": [
+      "public_annotation.gmt",
+      "public_gene_mapping.csv",
+      "annotation_source.json"
+    ],
+    "dependencies": [
+      "AnnotationDbi",
+      "GO.db",
+      "org.Hs.eg.db / org.Mm.eg.db",
+      "digest"
+    ],
+    "parameters": [
+      "species：人或小鼠",
+      "pathway_source：实际公共来源",
+      "go_ontology：GO 分类"
+    ],
+    "errors": [
+      "未识别基因编号",
+      "编号与名称冲突",
+      "公共缓存或网络不可用"
+    ],
+    "articles": [
+      "go-kegg",
+      "reactome",
+      "go-kegg-code",
+      "reactome-code"
+    ]
+  }
+]

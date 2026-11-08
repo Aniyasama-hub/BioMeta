@@ -96,7 +96,7 @@ for (id in tb_tool_catalog()$id) {
 }
 files <- list.files(directory, recursive = TRUE, full.names = TRUE)
 figures <- files[grepl("figure[.](png|svg|tiff|pdf)$", files)]
-stopifnot(length(figures) == 32L, all(file.info(figures)$size > 100))
-cat("PASS 14 schemas; 8 synthetic figure routes x 4 output formats\n")
+stopifnot(length(figures) == 36L, all(file.info(figures)$size > 100))
+cat("PASS current schemas; 9 synthetic figure routes (including both volcano orientations) x 4 formats\n")
 writeLines(capture.output(utils::sessionInfo()), file.path(directory, "sessionInfo.txt"))
 cat("SMOKE CHECK COMPLETE\n")

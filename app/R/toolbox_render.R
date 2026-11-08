@@ -210,9 +210,18 @@ tb_render_circos <- function(bundle, style, output) {
   }
 }
 
-tb_render_legacy <- function(bundle, spec, output, engine) {
+tb_render_legacy <- function(bundle, spec, output, engine, root) {
+  script <- if (spec$tool == "custom_heatmap") "04.4_custom_gene_count_heatmap.R" else "04.3_manual_pathway_heatmap.R"
+  updated <- parse(file.path(dirname(root), "legacy", script), encoding = "UTF-8")
+  assignments <- vapply(updated, function(x) is.call(x) && identical(x[[1]], as.name("<-")) &&
+    identical(x[[2]], as.name("ht")), logical(1))
+  heatmap_expression <- updated[[which(assignments)[1L]]]
   context <- bundle$context
   style <- spec$style
+  if (style$heat_cell_height > 0) style$row_font_size <- min(style$row_font_size, style$heat_cell_height * 2.3)
+  if (style$heat_cell_width > 0) style$column_font_size <- min(style$column_font_size, style$heat_cell_width * 2.3)
+  context$wb_style <- style
+  context$wb_cell_extent <- engine$.heatmap_cell_extent
   colors <- tb_gradient_ramp(style, c(style$low, style$mid, style$high))
   breaks <- seq(-style$z_limit, style$z_limit, length.out = length(colors))
   # Keep the prepared values unchanged and rebuild all graphical objects.
@@ -257,7 +266,8 @@ tb_render_legacy <- function(bundle, spec, output, engine) {
       as.character(expression[[2]]) else ""
     if (name == "col_fun") {
       context$col_fun <- circlize::colorRamp2(breaks, colors)
-    } else if (!name %in% c("draw_one", "draw_file")) eval(expression, context)
+    } else if (name == "ht") eval(heatmap_expression, context)
+    else if (!name %in% c("draw_one", "draw_file")) eval(expression, context)
   }
 }
 
@@ -266,6 +276,8 @@ tb_render_request <- function(bundle, spec, root, directory, engine = tb_engine(
   dir.create(output, recursive = TRUE, showWarnings = FALSE)
   tb_status_write(directory, "running", 85, "根据已准备的数据绘图。")
   style <- utils::modifyList(engine$.default_plot_style(), spec$style)
+  if (identical(bundle$type, "heatmap") && is.null(bundle$extras$clustering) && spec$tool != "immune")
+    bundle$extras$clustering <- spec$params[c("cluster_rows", "cluster_columns", "distance", "linkage", "column_cluster_mode")]
   style$colors <- c(Up = style$up, Down = style$down, Not_significant = style$neutral)
   style$show_sample_labels <- spec$params$labels
   style$palette <- tb_gradient_colors(style, c(style$group_a, style$group_b, "#A89046", "#697C61"))
@@ -287,8 +299,22 @@ tb_render_request <- function(bundle, spec, root, directory, engine = tb_engine(
     style$feature_color <- mid
     style$link_color <- high
   }
-  if (bundle$type == "legacy_heatmap") {
-    tb_render_legacy(bundle, spec, output, engine)
+  if (bundle$type == "enrichment_collection" || (bundle$type == "enrichment" && style$enrichment_kind == "both")) {
+    plots <- if (bundle$type == "enrichment_collection") bundle$plots else list(enrichment = bundle)
+    if (!is.null(bundle$index)) engine$write_table(bundle$index, file.path(output, "go_plot_categories.csv"))
+    kinds <- if (style$enrichment_kind == "both") c("bar", "dot") else style$enrichment_kind
+    for (name in names(plots)) for (kind in kinds) {
+      target <- file.path(output, name, kind)
+      dir.create(target, recursive = TRUE, showWarnings = FALSE)
+      current <- style; current$enrichment_kind <- kind
+      engine$export_bundle(plots[[name]], target)
+      engine$render_bundle(plots[[name]], current, target)
+      for (file in list.files(target, pattern = "^figure[.]", full.names = TRUE))
+        if (!file.rename(file, file.path(target, paste0(name, "_", kind, "plot.", tools::file_ext(file)))))
+          stop("无法命名 GO 出图文件。")
+    }
+  } else if (bundle$type == "legacy_heatmap") {
+    tb_render_legacy(bundle, spec, output, engine, root)
   } else if (bundle$type == "circos") {
     tb_render_circos(bundle, style, output)
   } else if (bundle$type == "figure_layout") {
@@ -316,7 +342,8 @@ tb_redraw_request <- function(spec, root, directory, previous_output = NULL) {
   dir.create(output)
   old <- previous_output %||% file.path(previous, "outputs")
   files <- list.files(old, recursive = TRUE)
-  files <- files[!grepl("[.](png|svg|tiff|pdf|html|js)$", files, ignore.case = TRUE)]
+  files <- files[!grepl("[.](png|svg|tiff|pdf|html|js)$", files, ignore.case = TRUE) |
+    startsWith(gsub("\\\\", "/", files), "kegg_maps/")]
   for (name in files) {
     target <- file.path(output, name)
     dir.create(dirname(target), recursive = TRUE, showWarnings = FALSE)
@@ -331,5 +358,7 @@ tb_redraw_request <- function(spec, root, directory, previous_output = NULL) {
     jsonlite::write_json(metadata, manifest, pretty = TRUE, auto_unbox = TRUE)
   }
   tb_write_reproduce(spec, file.path(directory, "reproduce.R"), root)
+  tb_name_outputs(file.path(directory, "outputs"), spec$tool)
   tb_status_write(directory, "completed", 100, "已复用分析结果并重新绘图。")
+  tb_save_result_copy(root, directory)
 }

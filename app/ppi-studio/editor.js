@@ -390,3 +390,31 @@ field('cy').style.background = background;
 setNodeStyle('ellipse');
 selectPalette('');
 selectTheme('');
+
+const cachePng = document.getElementById('cache-png');
+if (cachePng) cachePng.onclick = () => {
+  const target = window.opener || (window.parent !== window ? window.parent : null);
+  const payload = {type: 'ppi-cache-image', png: cy.png({bg: background, full: false, scale: 2})};
+  if (target) target.postMessage(payload, location.origin);
+  else if (ppiCacheChannel) ppiCacheChannel.postMessage(payload);
+  else { field('detail').textContent = '当前浏览器不支持回传，请导出 PNG 后在主窗口上传。'; return; }
+  field('detail').textContent = '已发送至工作站；请在主窗口确认缓存提示。';
+};
+window.addEventListener('message', event => {
+  if (event.origin === location.origin && event.data?.type === 'ppi-cache-image' && window.parent !== window)
+    window.parent.postMessage(event.data, location.origin);
+});
+
+// The advanced window intentionally has no opener. A job-scoped same-origin channel
+// returns its image to the embedded editor without restoring window.opener.
+const ppiCacheChannel = ['http:', 'https:'].includes(location.protocol) && typeof BroadcastChannel === 'function'
+  ? new BroadcastChannel('ppi-cache:' + location.pathname.split('/')[1]) : null;
+if (ppiCacheChannel) ppiCacheChannel.onmessage = event => {
+  if (event.data?.type === 'ppi-cache-image' && window.parent !== window)
+    window.parent.postMessage(event.data, location.origin);
+};
+window.addEventListener('pagehide', () => ppiCacheChannel?.close());
+if (cachePng) {
+  cachePng.disabled = false;
+  cachePng.title = '将当前视图加入工作站本次流程的图片缓存';
+}

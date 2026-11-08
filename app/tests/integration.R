@@ -29,7 +29,10 @@ for (tool in tools) {
     chromosomes = file.path(root, "examples/circos_chromosomes.csv"),
     features = file.path(root, "examples/circos_features.csv"), links = file.path(root, "examples/circos_links.csv"))
   if (tool == "network_files") inputs$edges <- file.path(root, "examples/ppi_edges.csv")
+  # Count-based branch: do not also pass an unrelated processed matrix.
+  if (!tool %in% c("matrix_pca", "matrix_heatmap")) inputs$matrix <- ""
   spec <- list(tool = if (tool == "network_files") "network" else tool, inputs = inputs, params = list(control = "A", treatment = "B", fit_type = "mean",
+    downstream_input = FALSE, pathway_source = "custom",
     min_count = 1, min_samples = 2, padj = .5, log2fc = .5, pca_top = 60, heatmap_top = 20,
     min_set_size = 5, max_set_size = 80, gmt_id_type = "gene_id", database_version = "synthetic-test",
     network_mode = if (tool == "network_files") "files" else "deg"), style = list(formats = "svg", width = 5, height = 4, dpi = 96))

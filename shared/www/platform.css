@@ -1,0 +1,68 @@
+.platform-view[hidden] {
+  display: none !important;
+}
+.platform-switcher {
+  position: relative;
+  border: 0;
+  margin: 0 0 20px;
+  padding: 0;
+}
+.platform-switcher > summary {
+  cursor: pointer;
+  list-style: none;
+}
+.platform-switcher > summary::before {
+  display: none;
+}
+.platform-switcher > summary::-webkit-details-marker {
+  display: none;
+}
+.platform-switcher .brand {
+  margin: 0;
+  padding-bottom: 14px;
+}
+.platform-switcher .brand strong {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.platform-switcher .brand small {
+  letter-spacing: 0;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.platform-projects {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  z-index: 100;
+  background: var(--ui-panel, #fffdf7);
+  border: 1px solid var(--ui-line, #b8b4a5);
+  border-radius: 5px;
+  box-shadow: 0 12px 28px #0004;
+  padding: 6px;
+}
+.platform-projects a {
+  display: block;
+  padding: 12px 9px;
+  color: var(--ui-text, #29312e);
+  text-decoration: none;
+}
+.platform-projects a strong,
+.platform-projects a small {
+  display: block;
+}
+.platform-projects a strong {
+  font-size: 13px;
+}
+.platform-projects a small {
+  font-size: 11px;
+  margin-top: 4px;
+}
+.platform-projects a:hover,
+.platform-projects a[aria-current='page'] {
+  background: var(--ui-hover, #e5eadd);
+}
+.platform-switcher:focus-within {
+  outline-offset: 3px;
+}

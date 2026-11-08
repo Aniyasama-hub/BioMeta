@@ -1,12 +1,12 @@
 # 计算层仅由独立 worker 调用；重用项目模块，不在界面线程执行分析。
 tb_engine <- function(root) {
   environment <- new.env(parent = globalenv())
-  for (file in c("core.R", "analysis.R", "prepare.R", "pathways.R", "ppi_prepare.R", "plots.R")) {
+  for (file in c("core.R", "gene_mapping.R", "pathway_options.R", "analysis.R", "prepare.R", "pathways.R", "ppi_prepare.R", "plots.R")) {
     sys.source(file.path(root, "R", file), envir = environment)
   }
   require_packages <- environment$require_packages
   environment$require_packages <- function(packages) tryCatch(require_packages(packages), error = function(e)
-    tb_fail("BW-R03", conditionMessage(e), hint = "在系统设置中检查当前 R 环境及所需 R 包。", parent = e))
+    tb_fail("BW-R03", conditionMessage(e), hint = "在设置中检查当前 R 环境及所需 R 包。", parent = e))
   import <- environment$import_dataset
   environment$import_dataset <- function(cfg, samples) {
     if (cfg$input$mode != "counts") return(import(cfg, samples))
@@ -43,6 +43,8 @@ tb_config <- function(spec, root, directory, engine, with_samples = TRUE) {
     cfg$project$max_samples <- nrow(samples)
   }
   cfg$project$output <- file.path(directory, "outputs")
+  if (nzchar(p$gene_id_column %||% "")) cfg$input$gene_id_col <- p$gene_id_column
+  if (nzchar(p$gene_name_column %||% "")) cfg$input$gene_name_col <- p$gene_name_column
   cfg$analysis$condition_levels <- if (length(p$model_groups)) p$model_groups else c(p$control, p$treatment)
   cfg$contrast <- list(numerator = p$treatment, denominator = p$control)
   cfg$analysis$min_count <- as.integer(p$min_count)
@@ -66,6 +68,11 @@ tb_config <- function(spec, root, directory, engine, with_samples = TRUE) {
   cfg$selection$distance <- p$distance
   cfg$selection$linkage <- p$linkage
   cfg$selection$pathway_top_n <- as.integer(p$pathway_top)
+  cfg$selection$ora_filter_mode <- p$ora_filter_mode
+  cfg$selection$ora_p_column <- p$ora_p_column
+  cfg$selection$ora_effect_column <- p$ora_effect_column
+  cfg$selection$go_output_scope <- p$go_output_scope
+  cfg$selection$go_ontology <- p$go_ontology
   cfg$selection$gsea_sort <- p$gsea_sort
   cfg$selection$gsea_order <- p$gsea_order
   cfg$selection$pathway_terms <- tb_parse_terms(p$pathway_terms)
@@ -78,6 +85,7 @@ tb_config <- function(spec, root, directory, engine, with_samples = TRUE) {
   cfg$pathways$database_label <- if (spec$tool == "go") paste0("GO_", paste(p$go_ontology, collapse = "+")) else if (spec$tool == "kegg") "KEGG" else "user_GMT"
   cfg$pathways$database_version <- p$database_version
   cfg$pathways$ora_padj <- p$ora_fdr
+  cfg$pathways$ora_metric <- p$ora_result_metric
   cfg$pathways$gsea_padj <- p$padj
   cfg$pathways$ppi_edges <- spec$inputs$edges
   cfg$pathways$ppi_score <- p$ppi_score
@@ -94,8 +102,16 @@ tb_config <- function(spec, root, directory, engine, with_samples = TRUE) {
 }
 
 tb_processed_expression <- function(spec, cfg, engine) {
-  values <- tb_read_matrix(spec$inputs$matrix, list(matrix_transform = "none"))
   samples <- tb_with_input(spec$inputs$groups, engine$read_samples(cfg))
+  source <- tb_read_preview(spec$inputs$matrix, n = -1)
+  mapping_params <- spec$params
+  if (!nzchar(mapping_params$gene_id_column %||% "")) mapping_params$gene_id_column <- names(source)[1]
+  raw <- tb_resolve_gene_columns(source, mapping_params)
+  columns <- intersect(c(samples$sample_id, samples$source_sample_id), names(raw))
+  adapter <- tempfile(fileext = ".csv")
+  on.exit(unlink(adapter), add = TRUE)
+  utils::write.csv(data.frame(gene_id = raw$gene_id, raw[, columns, drop = FALSE], check.names = FALSE), adapter, row.names = FALSE)
+  values <- tb_read_matrix(adapter, list(matrix_transform = "none"))
   columns <- match(samples$sample_id, colnames(values))
   missing <- is.na(columns)
   columns[missing] <- match(samples$source_sample_id[missing], colnames(values))
@@ -103,9 +119,13 @@ tb_processed_expression <- function(spec, cfg, engine) {
     c(spec$inputs$matrix, spec$inputs$groups), "核对两张表的样本 ID、空格和重复列。")
   values <- values[, columns, drop = FALSE]
   colnames(values) <- samples$sample_id
-  deg <- if (nzchar(spec$inputs$deg)) tb_with_input(spec$inputs$deg, tb_prepare_deg(spec$inputs$deg))
+  deg <- if (nzchar(spec$inputs$deg)) tb_with_input(spec$inputs$deg, tb_prepare_deg(spec$inputs$deg, mapping = if (spec$tool == "gsva") list() else spec$params))
   ids <- rownames(values)
-  gene_names <- if (is.null(deg)) ids else as.character(deg$gene_name[match(ids, deg$gene_id)])
+  gene_names <- raw$gene_name[match(ids, raw$gene_id)]
+  if (!is.null(deg)) {
+    fallback <- is.na(gene_names) | !nzchar(gene_names) | gene_names == ids
+    gene_names[fallback] <- as.character(deg$gene_name[match(ids[fallback], deg$gene_id)])
+  }
   missing <- is.na(gene_names) | !nzchar(gene_names)
   gene_names[missing] <- ids[missing]
   list(vst = values, counts = values, samples = samples, deg = deg,
@@ -148,21 +168,18 @@ tb_model <- function(cfg, engine, root, directory) {
 }
 
 
-tb_prepare_deg <- function(path, cfg = NULL, ranked = FALSE) {
-  data <- tb_read_preview(path, n = -1)
+tb_prepare_deg <- function(path, cfg = NULL, ranked = FALSE, mapping = list(), ora = FALSE) {
+  data <- tb_resolve_gene_columns(tb_read_preview(path, n = -1), mapping)
   if (!"log2FoldChange" %in% names(data) && "log2FC" %in% names(data)) data$log2FoldChange <- data$log2FC
-  if (!"gene_id" %in% names(data) && "rank_id" %in% names(data)) data$gene_id <- data$rank_id
-  if (!"gene_id" %in% names(data)) stop("输入表缺少 gene_id。")
-  data$gene_id <- trimws(as.character(data$gene_id))
-  if (anyNA(data$gene_id) || any(!nzchar(trimws(data$gene_id))) || anyDuplicated(data$gene_id)) {
-    stop("差异表 gene_id 必须非空且唯一。")
-  }
-  if (!"gene_name" %in% names(data)) data$gene_name <- data$gene_id
   if (ranked && !"stat" %in% names(data)) {
     score <- intersect(c("score", "rank_score"), names(data))
     if (length(score)) data$stat <- data[[score[1L]]]
   }
   needed <- if (ranked) "stat" else "log2FoldChange"
+  if (ora) {
+    tb_ora_selection(data, mapping)
+    return(data)
+  }
   if (!all(needed %in% names(data))) stop("缺少 ", needed, if (ranked) "（或 score / rank_score）" else "（或 log2FC）")
   if (!ranked && !any(c("padj", "pvalue") %in% names(data))) stop("差异表需含 padj 或完整表的 pvalue。")
   for (column in intersect(c("log2FoldChange", "padj", "pvalue", "stat"), names(data))) {
@@ -175,21 +192,36 @@ tb_prepare_deg <- function(path, cfg = NULL, ranked = FALSE) {
   for (column in intersect(c("pvalue", "padj"), names(data))) {
     if (any(data[[column]] < 0 | data[[column]] > 1, na.rm = TRUE)) stop(column, " 须位于 [0,1] 或为 NA。")
   }
-  if (!ranked && !"padj" %in% names(data)) data$padj <- stats::p.adjust(data$pvalue, method = "BH")
+  if (!ranked && !"padj" %in% names(data) && "pvalue" %in% names(data)) data$padj <- stats::p.adjust(data$pvalue, method = "BH")
   if (ranked && sum(is.finite(data$stat)) < 2L) stop("排序表至少需要两个有限的有符号统计量。")
   data
 }
 
-tb_selection_output <- function(analysis, cfg, directory, engine) {
+tb_selection_output <- function(analysis, cfg, directory, engine, make_pie = FALSE, style = list(formats = "png", dpi = 300)) {
   selected <- analysis$deg[engine$selection_mask(analysis$deg, cfg$selection), , drop = FALSE]
   selected <- selected[order(selected$padj, -abs(selected$log2FoldChange)), , drop = FALSE]
   engine$write_table(analysis$deg, file.path(directory, "outputs", "deg_all.csv"))
   engine$write_table(selected, file.path(directory, "outputs", "deg_selected.csv"))
-  summary <- data.frame(numerator = cfg$contrast$numerator, denominator = cfg$contrast$denominator,
-                         tested = nrow(analysis$deg), selected = nrow(selected),
-                         up = sum(selected$log2FoldChange > 0), down = sum(selected$log2FoldChange < 0),
-                         padj = cfg$selection$padj_cutoff, log2fc = cfg$selection$log2fc_cutoff)
+  deg <- analysis$deg
+  significant <- is.finite(deg$padj) & is.finite(deg$log2FoldChange) &
+    deg$padj <= cfg$selection$padj_cutoff & abs(deg$log2FoldChange) >= cfg$selection$log2fc_cutoff
+  up <- sum(significant & deg$log2FoldChange > 0)
+  down <- sum(significant & deg$log2FoldChange < 0)
+  summary <- data.frame(detected_before_filter = if (is.null(analysis$counts)) nrow(deg) else nrow(analysis$counts), tested = nrow(deg),
+    up = up, down = down, not_significant = nrow(deg) - up - down)
   engine$write_table(summary, file.path(directory, "outputs", "deg_summary.csv"))
+  if (make_pie && nrow(deg) > 0) {
+    pie_data <- data.frame(category = c("Up", "Down", "Not significant"), count = c(up, down, nrow(deg) - up - down))
+    engine$write_table(pie_data, file.path(directory, "outputs", "deg_proportions_plot_data.csv"))
+    pie_data$label <- ifelse(pie_data$count > 0, paste0(round(pie_data$count / sum(pie_data$count) * 100, 1), "%"), "")
+    plot <- ggplot2::ggplot(pie_data, ggplot2::aes(x = "", y = count, fill = category)) +
+      ggplot2::geom_col(width = 1) + ggplot2::coord_polar(theta = "y") +
+      ggplot2::geom_text(ggplot2::aes(label = label), position = ggplot2::position_stack(vjust = 0.5), size = 4) +
+      ggplot2::scale_fill_manual(values = c("Up" = cfg$style$colors[["Up"]], "Down" = cfg$style$colors[["Down"]],
+        "Not significant" = cfg$style$colors[["Not_significant"]])) + ggplot2::theme_void() + ggplot2::labs(fill = NULL)
+    for (format in style$formats) ggplot2::ggsave(file.path(directory, "outputs", paste0("deg_proportions.", format)),
+      plot, width = 6, height = 5, dpi = style$dpi)
+  }
   summary
 }
 
@@ -439,6 +471,7 @@ tb_run_request <- function(spec, root, directory) {
   tb_write_reproduce(spec, file.path(directory, "reproduce.R"), root)
   bundle <- NULL
   cfg <- NULL
+  map_failures <- 0L
   if (spec$tool == "figure_layout") {
     bundle <- tb_prepare_figure(spec)
     if (!is.null(spec$bulk_review)) engine$write_manifest(spec$bulk_review, file.path(output, "bulk_review.json"))
@@ -462,15 +495,20 @@ tb_run_request <- function(spec, root, directory) {
       engine$write_table(analysis$samples, file.path(output, "sample_mapping.csv"))
     } else if (nzchar(spec$inputs$deg)) {
       cfg <- tb_config(spec, root, directory, engine, with_samples = FALSE)
-      deg <- tb_with_input(spec$inputs$deg, tb_prepare_deg(spec$inputs$deg, ranked = spec$tool == "gsea"))
+      deg <- tb_with_input(spec$inputs$deg, tb_prepare_deg(spec$inputs$deg, ranked = spec$tool == "gsea", mapping = spec$params, ora = spec$tool %in% c("go", "kegg")))
       analysis <- list(deg = deg, genes = deg[c("gene_id", "gene_name")])
     } else {
       cfg <- tb_config(spec, root, directory, engine)
       analysis <- tb_model(cfg, engine, root, directory)
     }
+    if (spec$tool %in% tb_pathway_tools) {
+      mapping <- unique(analysis$genes[c("gene_id", "gene_name")])
+      mapping$status <- ifelse(mapping$gene_name == mapping$gene_id, "identifier_or_unresolved_name", "provided_name")
+      engine$write_table(mapping, file.path(output, "input_gene_mapping.csv"))
+    }
     tb_status_write(directory, "running", 65, "模型 / 差异数据已就绪，正在准备所选工具。")
-    if (!is.null(analysis$deg) && all(c("padj", "log2FoldChange") %in% names(analysis$deg)) &&
-        spec$params$group_mode != "joint") tb_selection_output(analysis, cfg, directory, engine)
+    if (!spec$tool %in% c("go", "kegg") && !is.null(analysis$deg) && all(c("padj", "log2FoldChange") %in% names(analysis$deg)) &&
+        spec$params$group_mode != "joint") tb_selection_output(analysis, cfg, directory, engine, make_pie = spec$tool == "deg", style = spec$style)
     if (spec$tool == "deg") {
       vst <- analysis$vst
       engine$write_table(data.frame(gene_id = rownames(vst), vst, check.names = FALSE), file.path(output, "vst.csv"))
@@ -480,8 +518,8 @@ tb_run_request <- function(spec, root, directory) {
       cfg$selection$target_genes <- spec$inputs$targets
       bundle <- engine$prepare_heatmap(analysis, cfg$selection)
       if (!spec$params$row_scale) bundle$extras$matrix_units <- "Expression"
-    } else if (spec$tool == "manual_heatmap") {
-      bundle <- tb_legacy_heatmap(spec, cfg, analysis, root, directory, engine)
+    } else if (spec$tool == "manual_heatmap" || (spec$tool == "heatmap" && spec$params$heatmap_kind == "annotated")) {
+      bundle <- tb_annotated_heatmap(spec, cfg, analysis, root, directory, engine)
     } else if (spec$tool != "deg") {
       type <- switch(spec$tool, pca = "pca", volcano = "volcano", heatmap = "heatmap",
                        go = "enrichment", kegg = "enrichment", gsea = "gsea", gsva = "gsva", network = "network")
@@ -489,8 +527,13 @@ tb_run_request <- function(spec, root, directory) {
       if (spec$tool %in% c("go", "kegg", "gsea", "gsva", "network")) {
         if (spec$tool %in% tb_pathway_tools && spec$params$pathway_source != "custom") {
           cfg <- tryCatch(tb_public_pathways(cfg, spec, analysis$genes, root, directory, engine), error = function(e) {
+            if (inherits(e, "bioworkbench_error")) {
+              if (!length(e$files)) e$files <- spec$inputs$deg
+              stop(e)
+            }
             if (inherits(e, "bioworkbench_error")) stop(e)
-            tb_fail("BW-D01", conditionMessage(e), hint = "请检查物种、基因 ID 和公共库连接，或改用本地 GMT。", parent = e)
+            tb_fail("BW-D02", conditionMessage(e), spec$inputs$deg,
+              hint = "请检查所选物种的注释包、公共注释缓存与连接。GMT 需另行核对物种及编号类型，不是身份冲突的通用修复。", parent = e)
           })
         }
         if (spec$tool == "network" && isTRUE(spec$params$ppi_reference) && !nzchar(spec$inputs$edges)) {
@@ -504,13 +547,16 @@ tb_run_request <- function(spec, root, directory) {
         pathways <- if (type == "network" && nzchar(spec$inputs$edges)) {
           tb_with_input(spec$inputs$edges, engine$analyze_pathways(analysis, cfg, output))
         } else engine$analyze_pathways(analysis, cfg, output)
+        if (spec$tool %in% c("go", "kegg", "gsva"))
+          pathways <- tb_mark_pathway_targets(pathways, spec, output, engine)
         engine$write_manifest(cfg$pathways, file.path(output, "annotation_source.json"))
         saveRDS(pathways, file.path(output, "pathways.rds"))
         tables_only <- type == "network" && isTRUE(spec$params$ppi_tables_only)
         if (type == "network" && !tables_only) tb_network_matrices(analysis, pathways, output, engine)
         table <- if (type == "enrichment") pathways$ora$results else if (type == "gsea") pathways$gsea$results else NULL
         empty <- (!is.null(table) && !nrow(table)) ||
-          (type == "enrichment" && !any(is.finite(table$p.adjust) & table$p.adjust <= cfg$pathways$ora_padj)) ||
+          (type == "enrichment" && !any(is.finite(engine$tb_pathway_metric(table, cfg$pathways$ora_metric)) &
+            engine$tb_pathway_metric(table, cfg$pathways$ora_metric) <= cfg$pathways$ora_padj)) ||
           (type == "gsva" && !nrow(pathways$gsva$results)) ||
           (type == "network" && !nrow(pathways$ppi$nodes))
         if (empty) {
@@ -519,7 +565,32 @@ tb_run_request <- function(spec, root, directory) {
       } else bundle <- engine$prepare_bundle(analysis, cfg, type)
     }
   }
+  if (spec$tool %in% c("go", "kegg", "gsva")) {
+    displayed <- tb_bundle_pathways(bundle)
+    report <- pathways$target_report
+    report$in_figure <- report$term_id %in% displayed
+    engine$write_table(report, file.path(output, "target_pathway_matches.csv"))
+  }
+  if (spec$tool == "kegg" && spec$params$pathway_source == "kegg" &&
+      !identical(spec$params$kegg_maps, "off")) {
+    ids <- tb_bundle_pathways(bundle)
+    if (identical(spec$params$kegg_maps, "significant")) {
+      table <- pathways$ora$results
+      values <- engine$tb_pathway_metric(table, cfg$pathways$ora_metric)
+      ids <- table$ID[is.finite(values) & values <= cfg$pathways$ora_padj]
+    }
+    tb_status_write(directory, "running", 80, "正在下载对应通路的 KEGG 官网机制图。")
+    maps <- tb_export_kegg_maps(ids, output, root, spec$params$species)
+    map_failures <- sum(maps$status == "failed")
+  }
   if (!is.null(bundle)) {
+    if (bundle$type == "volcano") {
+      targets <- tb_read_items(spec$params$target_text, spec$inputs$volcano_targets)
+      bundle$data$target <- bundle$data$gene_id %in% targets | bundle$data$gene_name %in% targets
+      matched <- targets %in% c(bundle$data$gene_id, bundle$data$gene_name)
+      engine$write_table(data.frame(requested = targets, status = ifelse(matched, "matched", "unmatched")),
+        file.path(output, "target_gene_match_report.csv"))
+    }
     if (bundle$type == "network") bundle$extras$topology <- tb_prepare_ppi_topology(bundle, root)
     if (bundle$type == "heatmap" && nzchar(spec$inputs$matrix) && bundle$extras$matrix_units %in% "VST")
       bundle$extras$matrix_units <- "Expression"
@@ -532,16 +603,21 @@ tb_run_request <- function(spec, root, directory) {
                               R = as.character(getRversion()),
                               packages = engine$package_versions(c("DESeq2", "ggplot2", "ComplexHeatmap", "circlize"))),
                          file.path(output, "manifest.json"))
-  if (!is.null(cfg)) dput(cfg, file = file.path(output, "config_resolved.R"))
+  if (!is.null(cfg)) dput(cfg, file = file.path(output, "config_resolved.txt"))
   writeLines(capture.output(utils::sessionInfo()), file.path(output, "sessionInfo.txt"))
   message("结果目录：", output)
   summary <- if (file.exists(file.path(output, "result_note.json"))) {
     "分析完成，当前条件无可绘图条目；完整结果表已保存。"
   } else if (spec$tool == "network" && isTRUE(spec$params$ppi_tables_only)) {
     "PPI 数据准备完成，节点表和边表已保存。"
+  } else if (map_failures > 0L) {
+    paste("富集结果已保存；", map_failures, "张 KEGG 机制图未下载，请查看下载清单及原因。")
   } else if (spec$tool == "deg") "差异分析完成，完整结果与筛选表已保存。" else {
     "所选工具已完成；结果表、参数与图形已保存。"
   }
+  tb_name_outputs(output, spec$tool)
+  tb_write_reproduce(spec, file.path(directory, "reproduce.R"), root)
   tb_status_write(directory, "completed", 100, summary)
+  tb_save_result_copy(root, directory)
   invisible(output)
 }

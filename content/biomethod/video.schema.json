@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Future BioMethod video resource",
+  "type": "object",
+  "required": ["id", "title", "status", "article_ids"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "video_url": {
+      "type": ["string", "null"],
+      "format": "uri"
+    },
+    "cover_url": {
+      "type": ["string", "null"],
+      "format": "uri"
+    },
+    "subtitle_url": {
+      "type": ["string", "null"],
+      "format": "uri"
+    },
+    "chapters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["title", "start_seconds"],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "start_seconds": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "article_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "status": {
+      "enum": ["draft", "published", "archived"]
+    }
+  },
+  "additionalProperties": false
+}

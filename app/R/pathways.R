@@ -63,7 +63,6 @@
   joined$mapped_name <- gene_map$gene_name[match(joined$gene_id, gene_map$gene_id)]
   if (id_type == "gene_id") joined$rank_id <- joined$gene_id else joined$rank_id <- joined$mapped_name
   valid <- is.finite(joined$stat)
-  if ("pvalue" %in% names(joined)) valid <- valid & is.finite(joined$pvalue)
   joined <- joined[!is.na(joined$rank_id) & nzchar(joined$rank_id) & valid, , drop = FALSE]
   joined <- joined[order(-abs(joined$stat), joined$rank_id, joined$gene_id), , drop = FALSE]
   joined <- joined[!duplicated(joined$rank_id), , drop = FALSE]
@@ -79,9 +78,9 @@
 
 # 在分析 ID 空间内运行 ORA，clusterProfiler 仅用于完整统计，不提前截断显著性。
 .ora_statistics <- function(deg, genes, gmt, cfg) {
-  tested <- if ("pvalue" %in% names(deg)) is.finite(deg$pvalue) else is.finite(deg$padj)
-  tested_deg <- deg[tested, , drop = FALSE]
-  selected <- tested_deg$gene_id[selection_mask(tested_deg, cfg$selection)]
+  selection <- tb_ora_selection(deg, cfg$selection)
+  tested_deg <- deg[selection$tested, , drop = FALSE]
+  selected <- deg$gene_id[selection$selected]
   ids_to_gmt <- function(ids) {
     ids <- as.character(ids[!is.na(ids)])
     if (cfg$pathways$gmt_id_type == "gene_id") return(unique(ids))
@@ -112,12 +111,15 @@
     geneID = character(), Count = integer()
   )
   if (nrow(table) && "p.adjust" %in% names(table)) {
-    table$significant <- !is.na(table$p.adjust) & table$p.adjust <= cfg$pathways$ora_padj
+    metric <- tb_pathway_metric(table, cfg$pathways$ora_metric %||% "padj")
+    table$significant <- is.finite(metric) & metric <= cfg$pathways$ora_padj
   }
   list(results = table, universe = universe, selected = selected)
 }
 
 .run_ora <- function(deg, genes, gmt, cfg, output_dir) {
+  write_manifest(tb_ora_selection(deg, cfg$selection)$specification,
+    file.path(output_dir, "ora_input_selection.json"))
   mapping <- cfg$pathways$go_term_ontology
   if (length(mapping)) {
     parts <- lapply(split(names(mapping), unname(mapping)), function(ids) {
@@ -145,12 +147,22 @@
     .write_pathway_table(data.frame(gmt_id = result$selected), file.path(output_dir, "ora_selected_genes.csv"))
   }
   .write_pathway_table(result$results, file.path(output_dir, "ora_results.csv"))
+  quality_path <- file.path(output_dir, "mapping_quality.json")
+  if (file.exists(quality_path)) {
+    quality <- jsonlite::read_json(quality_path, simplifyVector = FALSE)
+    quality$mode <- "ORA"
+    quality$tested_genes <- sum(tb_ora_selection(deg, cfg$selection)$tested)
+    quality$candidate_genes <- sum(tb_ora_selection(deg, cfg$selection)$selected)
+    quality$final_universe_genes <- length(result$universe)
+    quality$final_enrichment_genes <- length(result$selected)
+    write_manifest(quality, quality_path)
+  }
   result
 }
 
 # Sort the full results and the curve selection consistently. Missing values always come last.
 .gsea_order <- function(table, selection) {
-  metric <- table[[selection$gsea_sort %||% "padj"]]
+  metric <- tb_pathway_metric(table, selection$gsea_sort %||% "padj")
   if (identical(selection$gsea_order, "desc")) metric <- -metric
   order(metric, -abs(table$NES), table$pathway, na.last = TRUE)
 }
@@ -185,6 +197,15 @@
   }
   .write_pathway_table(output_table, file.path(output_dir, "gsea_results.csv"))
   .write_pathway_table(data.frame(rank_id = names(stats), stat = unname(stats)), file.path(output_dir, "gsea_ranked_stats.csv"))
+  quality_path <- file.path(output_dir, "mapping_quality.json")
+  if (file.exists(quality_path)) {
+    quality <- jsonlite::read_json(quality_path, simplifyVector = FALSE)
+    quality$mode <- "GSEA"
+    quality$valid_ranked_genes <- length(stats)
+    quality$final_enrichment_genes <- length(intersect(names(stats), unique(unlist(pathways, use.names = FALSE))))
+    quality$ranking_policy <- "all_finite_signed_statistics; no_ORA_significance_filter; stable_id_ties_by_absolute_stat_then_id"
+    write_manifest(quality, quality_path)
+  }
   list(results = result, ranked_stats = stats, pathways = pathways)
 }
 
@@ -270,7 +291,8 @@
 # 按配置运行选定模块，返回各模块结果、基因集和 ID 映射报告。
 analyze_pathways <- function(analysis, cfg, output_dir = ".") {
   enabled <- unique(cfg$pathways$enabled)
-  required <- c(if (any(enabled %in% c("ora", "ppi"))) c("gene_id", "gene_name", "log2FoldChange", "padj"),
+  required <- c(if ("ora" %in% enabled) c("gene_id", "gene_name"),
+    if ("ppi" %in% enabled) c("gene_id", "gene_name", "log2FoldChange", "padj"),
     if ("gsea" %in% enabled) c("gene_id", "stat"))
   if (!all(required %in% names(analysis$deg))) stop("差异或排序表缺少必要列。", call. = FALSE)
   if ("gsva" %in% enabled && is.null(rownames(analysis$vst))) stop("GSVA 需要逐样本表达矩阵。", call. = FALSE)

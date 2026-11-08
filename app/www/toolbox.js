@@ -26,7 +26,15 @@ document.addEventListener('click', function (event) {
 
   function hide() {
     clearTimeout(timer);
-    if (active) active.removeAttribute('aria-describedby');
+    if (active) {
+      const descriptions = (active.getAttribute('aria-describedby') || '')
+        .split(/\s+/).filter((id) => id && id !== tip.id);
+      if (descriptions.length) {
+        active.setAttribute('aria-describedby', descriptions.join(' '));
+      } else {
+        active.removeAttribute('aria-describedby');
+      }
+    }
     active = null;
     tip.hidden = true;
   }
@@ -39,7 +47,8 @@ document.addEventListener('click', function (event) {
       if (!host.isConnected) return hide();
       tip.textContent = host.dataset.help;
       tip.hidden = false;
-      host.setAttribute('aria-describedby', tip.id);
+      const descriptions = (host.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
+      host.setAttribute('aria-describedby', [...descriptions, tip.id].join(' '));
       const rect = host.getBoundingClientRect();
       const x = point ? point.x + 14 : rect.left;
       const y = point ? point.y + 20 : rect.bottom + 8;
@@ -77,7 +86,7 @@ document.addEventListener('click', function (event) {
   document.addEventListener('DOMContentLoaded', () => {
     document.body.append(tip);
     hydrate();
-    new MutationObserver(hydrate).observe(document.querySelector('.app-shell'), {childList:true, subtree:true});
+    new MutationObserver(hydrate).observe(document.querySelector('.app-shell') || document.body, {childList:true, subtree:true});
   });
   document.addEventListener('mouseover', event => {
     const host = event.target.closest('[data-help]');
@@ -144,7 +153,7 @@ document.addEventListener('click', function (event) {
     const panel = button.closest('.palette-tool');
     setColors(panel, button.dataset.colors.split(';'));
     panel.querySelector('summary').textContent = button.querySelector('span').textContent;
-    panel.querySelector('details').open = false;
+    button.closest('details').open = false;
   });
   document.addEventListener('input', event => {
     const panel = event.target.closest('.palette-tool');

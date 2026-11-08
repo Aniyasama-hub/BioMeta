@@ -1,5 +1,5 @@
 param(
-    [string]$Rscript,
+    [string]$Rscript = '',
     [ValidateRange(1024, 65515)][int]$Port = 7878,
     [switch]$NoBrowser
 )
@@ -16,23 +16,24 @@ try {
         if ($settings.rscript) { $Rscript = $settings.rscript }
     }
     if (-not $Rscript) {
-        $command = Get-Command Rscript.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($command) { $Rscript = $command.Source }
+        Add-Type -AssemblyName System.Windows.Forms
+        $picker = New-Object System.Windows.Forms.OpenFileDialog
+        $picker.Title = 'First use: select Rscript.exe in your R installation'
+        $picker.Filter = 'Rscript executable (Rscript.exe)|Rscript.exe'
+        $foundR = Get-Command Rscript.exe -ErrorAction SilentlyContinue
+        if ($foundR) { $picker.FileName = $foundR.Source }
+        if ($picker.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) { throw 'R selection cancelled.' }
+        $Rscript = $picker.FileName
+        $picker.Dispose()
+        $checkedVersion = & $Rscript --vanilla -e 'cat(as.character(getRversion()))'
+        if ($LASTEXITCODE -ne 0) { throw 'Selected Rscript cannot run.' }
+        Write-Host "Selected R version: $checkedVersion"
+        if (-not $settings) { $settings = [pscustomobject]@{} }
+        $settings | Add-Member -NotePropertyName rscript -NotePropertyValue $Rscript -Force
+        New-Item -ItemType Directory -Path (Split-Path -Parent $settingsPath) -Force | Out-Null
+        $settings | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $settingsPath -Encoding UTF8
     }
-    if (-not $Rscript) {
-        $locations = @($env:R_HOME)
-        foreach ($key in @('HKCU:\SOFTWARE\R-core\R', 'HKLM:\SOFTWARE\R-core\R',
-                           'HKLM:\SOFTWARE\WOW6432Node\R-core\R')) {
-            $installation = Get-ItemProperty -LiteralPath $key -Name InstallPath -ErrorAction SilentlyContinue
-            if ($installation.InstallPath) { $locations += $installation.InstallPath }
-        }
-        foreach ($location in $locations) {
-            if (-not $location) { continue }
-            $candidate = Join-Path $location 'bin\Rscript.exe'
-            if (Test-Path -LiteralPath $candidate -PathType Leaf) { $Rscript = $candidate; break }
-        }
-    }
-    if (-not $Rscript -or -not (Test-Path -LiteralPath $Rscript -PathType Leaf)) {
+    if (-not (Test-Path -LiteralPath $Rscript -PathType Leaf)) {
         throw "Rscript not found: $Rscript. Use -Rscript to select an installed R."
     }
     New-Item -ItemType Directory -Path $logRoot -Force | Out-Null
@@ -51,7 +52,7 @@ try {
     }
     if ($selectedPort -eq 0) { throw 'No free local port was found.' }
     $env:LC_ALL = 'English_United States.utf8'
-    Write-Host 'BioWorkbench - local R analysis toolbox'
+    Write-Host 'biometa - local R analysis toolbox'
     Write-Host "Address: http://127.0.0.1:$selectedPort"
     Write-Host "Startup log: $logFile"
     Write-Host 'Keep this window open. Press Ctrl+C to stop the service.'

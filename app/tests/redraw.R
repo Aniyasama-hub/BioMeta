@@ -40,13 +40,13 @@ spec$style$gradient <- "#508040"
 spec$style$formats <- "png"
 second <- wait(tb_launch_job(spec, root, redraw_from = first))
 stopifnot(identical(readRDS(file.path(first, "render.rds")), readRDS(file.path(second, "render.rds"))),
-          file.exists(file.path(second, "outputs", "figure.png")),
-          !file.exists(file.path(second, "outputs", "figure.svg")))
+          file.exists(file.path(second, "outputs", "kmeans.png")),
+          !file.exists(file.path(second, "outputs", "kmeans.svg")))
 archive <- file.path(test, "results.zip")
 tb_zip_results(second, archive)
 contents <- zip::zip_list(archive)$filename
-stopifnot(any(grepl("^01_.*/figure.png$", contents)),
-          any(grepl("^01_.*/plot_data.csv$", contents)),
+stopifnot(any(grepl("^01_.*/kmeans.png$", contents)),
+          any(grepl("^01_.*/kmeans_plot_data.csv$", contents)),
           any(grepl("^02_.*/manifest.json$", contents)),
           !any(grepl("render[.]rds|inputs/", contents)))
 folder <- file.path(test, "project")

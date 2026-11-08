@@ -111,5 +111,6 @@ tb_immune_bundle <- function(spec, engine, output, root) {
   utils::write.csv(matched_table, file.path(output, "immune_matched_markers.csv"), row.names = FALSE)
   list(type = "heatmap", data = scores,
     extras = list(matrix_units = "ssGSEA score", row_labels = rownames(scores),
+      clustering = list(cluster_rows = TRUE, cluster_columns = TRUE, distance = "euclidean", linkage = "complete", column_cluster_mode = "global"),
       row_order = seq_len(nrow(scores)), column_order = seq_len(ncol(scores))))
 }

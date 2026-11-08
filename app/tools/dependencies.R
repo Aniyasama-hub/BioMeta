@@ -1,10 +1,10 @@
 # 用固定R环境执行，只报告依赖版本；不会安装或更新任何包。
 packages <- c(
-  "shiny", "processx", "zip", "readxl", "scatterplot3d",
+  "shiny", "markdown", "processx", "zip", "readxl", "scatterplot3d",
   "org.Hs.eg.db", "org.Mm.eg.db", "GO.db", "AnnotationDbi",
   "digest", "jsonlite", "DESeq2", "SummarizedExperiment", "tximport",
   "ggplot2", "ggrepel", "svglite", "ComplexHeatmap", "circlize",
-  "rlang", "ggbeeswarm", "magick", "png", "patchwork", "limma", "clusterProfiler", "fgsea", "GSVA", "BiocParallel", "igraph"
+  "patchwork", "limma", "clusterProfiler", "fgsea", "GSVA", "BiocParallel", "igraph"
 )
 versions <- vapply(packages, function(package) {
   path <- find.package(package, quiet = TRUE)

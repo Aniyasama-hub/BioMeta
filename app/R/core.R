@@ -134,7 +134,7 @@ write_manifest <- function(value, path) {
 
 save_run_metadata <- function(cfg, directory, manifest) {
   dir.create(directory, recursive = TRUE, showWarnings = FALSE)
-  dput(cfg, file = file.path(directory, "config_resolved.R"))
+  dput(cfg, file = file.path(directory, "config_resolved.txt"))
   write_manifest(manifest, file.path(directory, "manifest.json"))
   writeLines(capture.output(utils::sessionInfo()), file.path(directory, "sessionInfo.txt"))
 }

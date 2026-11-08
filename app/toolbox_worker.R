@@ -6,6 +6,8 @@ directory <- normalizePath(args[1], winslash = "/", mustWork = TRUE)
 root <- normalizePath(args[2], winslash = "/", mustWork = TRUE)
 source(file.path(root, "R", "toolbox.R"), encoding = "UTF-8")
 source(file.path(root, "R", "toolbox_analysis.R"), encoding = "UTF-8")
+source(file.path(root, "R", "workbench_settings.R"), encoding = "UTF-8")
+source(file.path(root, "R", "bulk_workflow.R"), encoding = "UTF-8")
 source(file.path(root, "R", "group_comparisons.R"), encoding = "UTF-8")
 source(file.path(root, "R", "network_import.R"), encoding = "UTF-8")
 source(file.path(root, "R", "string_reference.R"), encoding = "UTF-8")
@@ -17,9 +19,12 @@ source(file.path(root, "R", "general_plot_render.R"), encoding = "UTF-8")
 source(file.path(root, "R", "figure_layout.R"), encoding = "UTF-8")
 spec <- NULL
 tryCatch({
+  tb_capture_runtime(directory)
   spec <- readRDS(file.path(directory, "request.rds"))
   if (is.null(spec$redraw_from)) tb_run_request(spec, root, directory) else tb_redraw_request(spec, root, directory)
+  tb_capture_runtime(directory)
 }, error = function(error) {
+  tryCatch(tb_capture_runtime(directory, error), error = function(e) message("诊断元数据写入失败：", conditionMessage(e)))
   progress <- tb_read_status(directory)$progress
   code <- if (progress >= 85) "BW-O01" else "BW-A01"
   detail <- tb_error_text(error, spec, code)

@@ -1,14 +1,48 @@
-<details open><summary>网络分析与筛选</summary>
+<details open>
+  <summary>网络分析与筛选</summary>
   <form id="analysis-form">
-    <label>分析类型<select id="analysis-kind"><option value="community">互作群集</option><option value="hub">枢纽节点</option></select></label>
-    <label><span class="help-wrap">算法
-      <a id="algorithm-help" class="algorithm-help" href="ppi-algorithms.html" target="_blank" rel="noopener" aria-label="对该算法的解释">?</a><span class="help-tip" aria-hidden="true">对该算法的解释</span>
-    </span><select id="algorithm"></select></label>
-    <label class="community-option">群集排序<select id="ranking"><option value="size">节点数</option><option value="density">网络密度</option><option value="edges">群集内边数</option></select></label>
-    <label class="community-option">至少节点数<input type="number" id="min-size" min="1" value="2" required></label>
-    <label>保留前 N 项<input type="number" id="top-n" min="1" value="10" required></label>
+    <label
+      >分析类型<select id="analysis-kind">
+        <option value="community">互作群集</option>
+        <option value="hub">枢纽节点</option>
+      </select></label
+    >
+    <label
+      ><span class="help-wrap"
+        >算法
+        <a
+          id="algorithm-help"
+          class="algorithm-help"
+          href="ppi-algorithms.html"
+          target="_blank"
+          rel="noopener"
+          aria-label="对该算法的解释"
+          >?</a
+        ><span class="help-tip" aria-hidden="true">对该算法的解释</span> </span
+      ><select id="algorithm"></select
+    ></label>
+    <label class="community-option"
+      >群集排序<select id="ranking">
+        <option value="size">节点数</option>
+        <option value="density">网络密度</option>
+        <option value="edges">群集内边数</option>
+      </select></label
+    >
+    <label class="community-option"
+      >至少节点数<input type="number" id="min-size" min="1" value="2" required
+    /></label>
+    <label class="community-option"
+      >所有簇合计前 N 个节点（按度排序；0 使用簇数量）<input
+        type="number"
+        id="total-nodes"
+        min="0"
+        value="0"
+        required
+    /></label>
+    <label>保留前 N 项<input type="number" id="top-n" min="1" value="10" required /></label>
     <button id="filter" type="submit">应用筛选</button>
     <button id="clear-filter" type="button">显示全部</button>
   </form>
-  <p id="summary" aria-live="polite">全部网络</p><ol id="clusters"></ol>
+  <p id="summary" aria-live="polite">全部网络</p>
+  <ol id="clusters"></ol>
 </details>

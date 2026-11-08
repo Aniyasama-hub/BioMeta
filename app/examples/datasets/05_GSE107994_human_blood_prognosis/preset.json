@@ -1,0 +1,1 @@
+{"species":"human","control":"Control","treatment":"Active_TB","fit_type":"parametric","min_count":10,"min_samples":3,"alpha":0.05,"use_batch":false,"covariates":"","count":true}

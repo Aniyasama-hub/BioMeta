@@ -6,3 +6,7 @@
 .paper-preview svg { display: block; width: min(100%, 240px); max-height: 280px; }
 .paper-preview figcaption { margin-top: .35rem; font-size: .8rem; }
 .task-error, .shiny-notification pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+
+.analysis-guide { text-decoration: none; cursor: pointer; vertical-align: middle; }
+.guide-page { max-width: 850px; margin: 2rem auto; padding: 2rem; line-height: 1.75; }
+.guide-page h3 { margin-top: 1.4rem; }

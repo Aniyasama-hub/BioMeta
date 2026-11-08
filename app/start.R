@@ -7,7 +7,7 @@ log <- file(args[4], open = "wt", encoding = "UTF-8")
 sink(log, split = TRUE)
 sink(log, type = "message")
 status <- tryCatch({
-  cat("BioWorkbench startup:", format(Sys.time()), "\n")
+  cat("biometa startup:", format(Sys.time()), "\n")
   cat("Application:", root, "\nR:", R.version.string, "\n")
   settings_path <- file.path(root, "results", "toolbox", "settings.json")
   if (file.exists(settings_path) && requireNamespace("jsonlite", quietly = TRUE)) {

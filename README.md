@@ -1,31 +1,46 @@
-# BioWorkbench · 转录组分析工作站
+# biometa (Beta)
 
-BioWorkbench 是面向**人和小鼠 Bulk RNA-seq** 的本地分析与科研绘图工作站。研究者可以从基因计数和样本分组开始分析，也可以直接复用已有的差异表达结果、逐样本表达矩阵或网络表。通过浏览器完成参数配置、结果审阅和图表导出，由本机 R 执行计算。
+biometa 是一套在本机运行的转录组分析工作站，面向研究肿瘤、免疫及相关疾病机制的人和小鼠 Bulk RNA-seq 数据。当前版本为 **0.2.0-beta.1**，包含分析工作站和 **BioMethod (Beta)** 方法知识库。
 
-## 特点与使用场景
+项目把分析、绘图和结果整理放在同一个流程里。可以独立使用 PCA、差异表达、火山图、热图、GO、KEGG、GSEA、GSVA、PPI 和免疫评分，也可以按步骤完成 Bulk 分析，挑选图片后组图。通用绘图还包括矩阵图、Circos、桑基图、韦恩图等，共 21 个工具入口。
 
-| 使用场景 | BioWorkbench 提供的功能 |
-| --- | --- |
-| 从 Count 开始分析 | Bulk RNA-seq 流程串联 PCA、DESeq2 差异分析、火山图、热图及下游分析。各步可单独检查和调整，再确认进入下一步。 |
-| 已有分析结果，继续做下游 | GO／KEGG 可读差异结果，GSEA 可读带方向的基因排序，GSVA 可读逐样本表达矩阵和分组。按需选用公共参考库或自建基因集。 |
-| 整理通路或网络结果 | PPI 可直接导入 Node／Edge，也可用 Count 加分组或 DEG 配合互作参考生成网络数据。独立编辑器支持节点样式、布局和网络筛选。 |
-| 准备论文图表 | 可从已有分析结果调整配色、字号、图例及导出格式。组图支持逐图大小、纸张方向、实时分栏预览和在线微调。 |
+## 项目侧重
 
-本地运行会保留任务记录、输入快照、分析参数和绘图数据，便于复核与重绘。常见输入错误会指出文件名和具体问题。免疫模块提供基因集相对富集评分，适合比较表达特征。更多输入规格与解释边界见[项目介绍与适用范围](介绍.md)。
+- 分析与重绘分开：修改颜色、字号和图例时，尽量复用已有计算结果。
+- 每项任务保存输入、参数、版本和日志，结果可导出作图数据及独立 R 脚本；失败任务可下载诊断包。
+- 自动流程支持逐步配置、返回重跑、标星选图及最终排版，不要求一次接受所有默认参数。
+- BioMethod 与工作站互相跳转，提供原理、操作、逐行代码教学和参考资料。当前有 18 篇文章、9 个源码索引和 15 条参考资料。
 
-## 下载 ZIP 与启动
+## 下载与配置
 
-**[下载最新版 ZIP](https://github.com/Aniyasama-hub/BioWorkbench/archive/refs/heads/main.zip)** · [下载 v0.2.0 固定快照](https://github.com/Aniyasama-hub/BioWorkbench/archive/da098b28a121cc6c9b2f9b64c3e411c15e8d0a24.zip)
+[下载 Beta ZIP](https://github.com/Aniyasama-hub/BioWorkbench/archive/refs/heads/main.zip)，完整解压；或者克隆同一仓库：
 
-1. 点击上方链接，或在仓库主页选择 **Code → Download ZIP**，将压缩包完整解压到本机。
-2. 安装 Windows 版 R 与所需的 R／Bioconductor 包。本版在 R 4.5.1 上验证，依赖清单见 [依赖检查脚本](app/tools/dependencies.R)。
-3. 在解压目录双击 **Start.cmd**。浏览器打开本机页面，默认端口为 7878，以启动窗口显示的地址为准。
-4. 如果电脑有多套 R，可在 PowerShell 中显式指定装好依赖的版本。
+```powershell
+git clone https://github.com/Aniyasama-hub/BioWorkbench.git
+cd BioWorkbench
+```
 
-~~~powershell
-.\launch.ps1 -Rscript '<R 安装目录>\bin\Rscript.exe'
-~~~
+安装 R 后，用自己选择的 Rscript 执行以下命令。路径只是示例，本轮测试环境为 Windows、R 4.5.1。
 
-可用 `Rscript app/tools/dependencies.R` 检查当前环境已安装的包。ZIP 提供工作站源码、合成示例与文档。R 和依赖需本机安装，部分公共参考库的首次获取需要联网。
+```powershell
+& 'C:\Program Files\R\R-4.5.1\bin\Rscript.exe' app/tools/bootstrap.R --install
+& 'C:\Program Files\R\R-4.5.1\bin\Rscript.exe' app/tools/bootstrap.R --check
+.\Start.cmd
+```
 
-[操作指南](操作指南.md) · [项目介绍与适用范围](介绍.md) · [版本记录](CHANGELOG.md) · [第三方组件](app/THIRD_PARTY_NOTICES.md)
+首次启动需要选择 Rscript.exe；之后可在设置中嗅探并指定不同版本。包安装需要访问 CRAN/Bioconductor。ZIP 和仓库都不捆绑 R；详细步骤见 [安装说明](INSTALL.md)。
+
+## 怎样开始分析
+
+1. 启动后，在设置中选择示例数据熟悉操作，或直接上传自己的文件。Count 分析需要原始计数和分组；通路分析通常读取完整差异结果或排序表，GSVA 读取逐样本表达矩阵。
+2. 从首页选单项工具，或进入 Bulk 流程。确认物种、比较方向、编号列、筛选条件和图形设置后运行。
+3. 查看图像、映射摘要和结果表。单纯改样式可重绘；改变分析条件则重新计算。流程中的图片可标星，到排版步骤选用。
+4. 下载单个文件或完整结果包。遇到错误时先看具体提示，再从任务记录导出日志排查。
+
+左上角项目菜单可进入 BioMethod。所有知识条目仍按定义、原理、操作、适用范围和参考资料维护。
+
+## 版本与适用范围
+
+[更新说明](RELEASE_NOTES_v0.2.0-beta.1.md) · [复检报告](app/docs/beta-review-2026-11-09.md) · [项目结构](ARCHITECTURE.md) · [操作指南](操作指南.md) · [第三方说明](app/THIRD_PARTY_NOTICES.md)
+
+本轮 14 个回归套件通过，覆盖示例分析、出图和主要前端交互。当前面向 Windows 本地单用户使用；未验证所有系统、R 版本或研究设计。公共注释会随数据库版本变化，编号冲突需要核实，不能通过删除报错基因代替检查。输入、设置和结果保存在本机，不随源码分发。

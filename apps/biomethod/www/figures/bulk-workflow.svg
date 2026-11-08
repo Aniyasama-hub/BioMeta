@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="210" viewBox="0 0 1000 210" role="img" aria-labelledby="title desc">
+<title id="title">Bulk RNA-seq 工作流程示意</title>
+<desc id="desc">整理输入，检查样本与拟合差异模型，解释基因功能，最后进行网络与图片整理；每一步由用户审核后继续。</desc>
+<rect width="1000" height="210" fill="#f4f1eb" rx="8"/>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10" fill="none" stroke="#656c73" stroke-width="1.4"/></marker></defs>
+<g fill="#ffffff" stroke="#b3bac0"><rect x="22" y="28" width="214" height="114" rx="6"/><rect x="268" y="28" width="214" height="114" rx="6"/><rect x="514" y="28" width="214" height="114" rx="6"/><rect x="760" y="28" width="218" height="114" rx="6"/></g>
+<g stroke="#656c73" stroke-width="1.5" marker-end="url(#arrow)"><path d="M239 85H260"/><path d="M485 85H506"/><path d="M731 85H752"/></g>
+<g font-family="Microsoft YaHei, sans-serif" fill="#27323c" text-anchor="middle"><g font-size="20" font-weight="600"><text x="129" y="61">整理输入</text><text x="375" y="61">检查与建模</text><text x="621" y="61">功能解释</text><text x="869" y="61">整理与交付</text></g><g font-size="15"><text x="129" y="94">原始 Count 与分组</text><text x="129" y="121">物种、样本与比较方向</text><text x="375" y="94">PCA、DEG、火山图与热图</text><text x="375" y="121">复核异常样本与统计设置</text><text x="621" y="94">GO / KEGG / GSEA / GSVA</text><text x="621" y="121">按所需输入与背景分析</text><text x="869" y="94">PPI、科研组图与导出</text><text x="869" y="121">保存作图数据及分析记录</text></g><text x="500" y="183" font-size="15" fill="#80505a">逐步审核后继续；各步骤可以调整或跳过，网络分析需另有互作参考。</text></g>
+</svg>

@@ -184,13 +184,31 @@ if (length(group_colors)) auto_group_colors[intersect(names(group_colors), group
 top_anno <- ComplexHeatmap::HeatmapAnnotation(Group = meta[[group_col]], col = list(Group = auto_group_colors),
   show_annotation_name = FALSE, show_legend = FALSE)
 col_fun <- circlize::colorRamp2(c(-scale_limit, 0, scale_limit), heatmap_colors)
-ht <- ComplexHeatmap::Heatmap(plot_mat, name = legend_title, col = col_fun, na_col = na_color,
-  column_split = meta[[group_col]], column_title = group_values, top_annotation = top_anno,
-  cluster_rows = cluster_rows, cluster_columns = cluster_columns,
+ht <- local({
+  style <- get0("wb_style", ifnotfound = list())
+  extent <- get0("wb_cell_extent", ifnotfound = function(...) NULL)
+  reverse_row <- isTRUE(style$reverse_rows)
+  reverse_col <- isTRUE(style$reverse_columns)
+  groups <- meta[[group_col]]
+  if (reverse_col) groups <- factor(groups, levels = rev(levels(groups)))
+  clustered_tree <- function(distance, reverse) function(m) {
+    distance <- safe_dist(distance)
+    d <- if (is.function(distance)) distance(m) else stats::dist(m, method = distance)
+    tree <- as.dendrogram(stats::hclust(d, method = clustering_method))
+    if (reverse) rev(tree) else tree
+  }
+  ComplexHeatmap::Heatmap(plot_mat, name = legend_title, col = col_fun, na_col = na_color,
+  width = extent(style$heat_cell_width, ncol(plot_mat)), height = extent(style$heat_cell_height, nrow(plot_mat)),
+  column_split = groups, column_title = if (reverse_col) rev(group_values) else group_values, top_annotation = top_anno,
+  cluster_rows = if (cluster_rows) clustered_tree(row_distance, reverse_row) else FALSE,
+  cluster_columns = if (cluster_columns) clustered_tree(column_distance, reverse_col) else FALSE,
+  row_order = if (reverse_row && !cluster_rows) rev(seq_len(nrow(plot_mat))),
+  column_order = if (reverse_col && !cluster_columns) rev(seq_len(ncol(plot_mat))),
+  row_dend_reorder = FALSE, column_dend_reorder = FALSE,
   cluster_column_slices = cluster_column_slices, clustering_method_rows = clustering_method,
   clustering_method_columns = clustering_method, clustering_distance_rows = safe_dist(row_distance),
-  clustering_distance_columns = safe_dist(column_distance), show_row_dend = show_row_dendrogram,
-  show_column_dend = show_column_dendrogram, show_row_names = show_gene_names,
+  clustering_distance_columns = safe_dist(column_distance), show_row_dend = if (is.null(style$show_row_tree)) show_row_dendrogram else style$show_row_tree,
+  show_column_dend = if (is.null(style$show_column_tree)) show_column_dendrogram else style$show_column_tree, show_row_names = show_gene_names,
   show_column_names = show_sample_names, column_names_rot = sample_name_rotation,
   row_names_gp = grid::gpar(fontfamily = font_family, fontsize = gene_font_size, fontface = gene_font_face, col = gene_font_color),
   column_names_gp = grid::gpar(fontfamily = font_family, fontsize = sample_font_size, fontface = sample_font_face, col = sample_font_color),
@@ -206,6 +224,7 @@ ht <- ComplexHeatmap::Heatmap(plot_mat, name = legend_title, col = col_fun, na_c
       fontface = legend_label_font_face, col = legend_label_font_color),
     grid_width = grid::unit(legend_bar_width_mm, "mm"), grid_height = grid::unit(legend_bar_width_mm, "mm"),
     legend_height = grid::unit(legend_bar_height_mm, "mm"), legend_width = grid::unit(legend_bar_height_mm, "mm")))
+})
 
 draw_one <- function(fmt) {
   file <- file.path(out_path, paste0(output_prefix, "_Heatmap.", fmt))

@@ -118,6 +118,7 @@ prepare_heatmap <- function(analysis, selection) {
        extras = list(matrix_units = if (selection$row_zscore) "row_zscore" else "VST",
                      expression_before_scale = before_scale, row_order = row_order,
                      column_order = column_order, row_tree = row_tree,
+                     clustering = selection[c("cluster_rows", "cluster_columns", "distance", "linkage", "column_cluster_mode")],
                      row_labels = row_labels, row_annotation = row_annotation,
                      sample_annotation = sample_annotation, gene_match_report = match_report,
                      excluded_genes = excluded))
@@ -166,31 +167,56 @@ prepare_bundle <- function(analysis, cfg, type, pathways = NULL) {
   if (type == "enrichment") {
     table <- pathways$ora$results
     if (is.null(table)) stop("未运行ORA模块。")
-    table <- table[is.finite(table$p.adjust) & table$p.adjust <= cfg$pathways$ora_padj, , drop = FALSE]
+    filter_metric <- tb_pathway_metric(table, cfg$pathways$ora_metric %||% "padj")
+    table <- table[is.finite(filter_metric) & filter_metric <= cfg$pathways$ora_padj, , drop = FALSE]
     terms <- selection$pathway_terms
-    if (length(terms)) table <- table[table$ID %in% terms, , drop = FALSE]
+    if (length(terms)) table <- table[table$ID %in% terms | table$Description %in% terms, , drop = FALSE]
     if (!nrow(table)) stop("没有符合阈值的富集条目；完整富集结果仍已保存。")
     ratio <- vapply(strsplit(table$GeneRatio, "/", fixed = TRUE),
-                     function(x) as.numeric(x[1]) / as.numeric(x[2]), numeric(1))
+      function(x) as.numeric(x[1]) / as.numeric(x[2]), numeric(1))
     data <- data.frame(term_id = table$ID, description = table$Description,
-      padj = table$p.adjust, gene_ratio = ratio, count = table$Count, source = cfg$pathways$database_label)
+      pvalue = table$pvalue, padj = table$p.adjust, FDR = table$p.adjust,
+      gene_ratio = ratio, count = table$Count, source = cfg$pathways$database_label)
+    data$target_pathway <- table$target_pathway %||% rep(FALSE, nrow(table))
     if ("ontology" %in% names(table)) data$ontology <- table$ontology
-    data <- data[is.finite(data$gene_ratio), , drop = FALSE]
-    data <- head(data[order(-data$gene_ratio, data$padj, data$term_id), , drop = FALSE], selection$pathway_top_n)
-    if (!nrow(data)) stop("没有可绘制的 Gene ratio。")
-    return(list(type = "enrichment", data = data, extras = list()))
+    metric <- selection$gsea_sort %||% "padj"
+    rank <- tb_pathway_metric(data, metric)
+    if ((selection$gsea_order %||% "asc") == "desc") rank <- -rank
+    data <- data[order(rank, -data$gene_ratio, data$term_id, na.last = NA), , drop = FALSE]
+    make <- function(rows) list(type = "enrichment", data = rows, extras = list(sort_metric = metric))
+    if (!nrow(data)) stop("所选通路排序指标没有有限数值。")
+    if ("ontology" %in% names(data)) {
+      categories <- c("BP", "CC", "MF")
+      parts <- lapply(categories, function(category) head(data[data$ontology == category, , drop = FALSE], selection$pathway_top_n))
+      names(parts) <- paste0("go_", categories)
+      combined <- do.call(rbind, parts)
+      scope <- selection$go_output_scope %||% "both"
+      plots <- list()
+      if (scope %in% c("both", "combined")) {
+        plots$go_BP_CC_MF <- make(combined)
+        plots$go_BP_CC_MF$extras$go_facets <- TRUE
+      }
+      if (scope %in% c("both", "single")) for (key in names(parts))
+        if (nrow(parts[[key]])) plots[[key]] <- make(parts[[key]])
+      requested <- categories %in% (selection$go_ontology %||% categories)
+      return(list(type = "enrichment_collection", plots = plots,
+        index = data.frame(ontology = categories, requested = requested,
+          displayed = vapply(parts, nrow, integer(1)),
+          note = ifelse(!requested, "未选择此分类（未检验）",
+            ifelse(vapply(parts, nrow, integer(1)) > 0, "", "无符合当前阈值的条目")))))
+    }
+    return(make(head(data, selection$pathway_top_n)))
   }
   if (type == "gsea") {
     result <- pathways$gsea
     table <- result$results
     if (is.null(table) || !nrow(table)) stop("所选数据库没有可展示的 GSEA 通路。")
     table <- table[.gsea_order(table, selection), , drop = FALSE]
-    metric <- selection$gsea_sort %||% "padj"
     if (!is.null(selection$pathway_id)) {
       table <- table[table$pathway == selection$pathway_id, , drop = FALSE]
       if (!nrow(table)) stop("指定通路 ID 未匹配所选数据库的 GSEA 结果。")
     }
-    table <- head(table[is.finite(table[[metric]]) & is.finite(table$NES), , drop = FALSE], selection$pathway_top_n)
+    table <- head(table[is.finite(tb_pathway_metric(table, selection$gsea_sort %||% "padj")) & is.finite(table$NES), , drop = FALSE], selection$pathway_top_n)
     if (!nrow(table)) stop("没有可按所选指标排序的通路。")
     stats <- result$ranked_stats
     weights <- abs(stats)
@@ -224,7 +250,9 @@ prepare_bundle <- function(analysis, cfg, type, pathways = NULL) {
     terms <- selection$pathway_terms
     if (length(terms)) table <- table[table$term_id %in% terms, , drop = FALSE]
     if (!nrow(table)) stop("指定的 GSVA 条目未匹配结果，请核对注释来源、条目 ID 与基因集大小。")
-    ids <- head(table$term_id[order(table$adj.P.Val, -abs(table$logFC))], selection$pathway_top_n)
+    metric <- tb_pathway_metric(table, selection$gsea_sort %||% "padj")
+    if ((selection$gsea_order %||% "asc") == "desc") metric <- -metric
+    ids <- head(table$term_id[order(metric, -abs(table$logFC), na.last = NA)], selection$pathway_top_n)
     matrix <- pathways$gsva$scores[ids, , drop = FALSE]
     constant <- apply(matrix, 1, stats::sd) == 0
     matrix <- matrix[!constant, , drop = FALSE]
@@ -236,8 +264,10 @@ prepare_bundle <- function(analysis, cfg, type, pathways = NULL) {
       stats::hclust(compute_distance(matrix, selection$distance), method = selection$linkage)$order else seq_len(nrow(matrix))
     return(list(type = "heatmap", data = matrix,
                  extras = list(matrix_units = if (selection$row_zscore) "row_zscore" else "GSVA_score",
+                               row_targets = (table$target_pathway %||% rep(FALSE, nrow(table)))[match(rownames(matrix), table$term_id)],
                                expression_before_scale = unscaled, row_labels = rownames(matrix),
                                row_order = row_order, column_order = heatmap_column_plan(matrix, annotation, selection),
+                               clustering = selection[c("cluster_rows", "cluster_columns", "distance", "linkage", "column_cluster_mode")],
                                sample_annotation = annotation,
                                statistics = table)))
   }

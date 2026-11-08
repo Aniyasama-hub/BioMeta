@@ -1,0 +1,14 @@
+{
+  "bulk": "bulk-rnaseq",
+  "pca": "pca",
+  "matrix_pca": "pca",
+  "deg": "deg",
+  "volcano": "deg",
+  "heatmap": "normalization",
+  "custom_heatmap": "normalization",
+  "matrix_heatmap": "normalization",
+  "go": "go-kegg",
+  "kegg": "go-kegg",
+  "gsea": "gsea",
+  "gsva": "normalization"
+}
