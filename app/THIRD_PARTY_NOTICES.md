@@ -38,3 +38,7 @@ The three-stop Sunset and BuRd presets use endpoints and a central colour from P
 - highlight.js 11.11.1 — BSD 3-Clause, Copyright 2006 Ivan Sagalaev. Project: https://github.com/highlightjs/highlight.js. Local core, R language, theme and full license: `../apps/biomethod/www/vendor/highlight/`.
 
 Each directory includes SOURCE.json recording the pinned npm distribution and its verified package integrity. These assets are served locally; no browser CDN requests are needed. Scientific references are maintained separately in `../content/biomethod/references.json`.
+
+## Bundled R installation resources
+
+R 4.6.2 for Windows — R Core Team and contributors, GPL-2 or GPL-3. Original binary installer and corresponding source are split into ordered files in ../installers/. Original COPYING and COPYRIGHTS.win, source URLs and complete archive checksums are retained there. The launcher reconstructs the installer without changing its contents. R packages are installed separately under their own licenses.

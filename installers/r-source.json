@@ -1,0 +1,14 @@
+{
+  "file": "R-4.6.2.tar.gz",
+  "source": "https://mirrors.tuna.tsinghua.edu.cn/CRAN/src/base/R-4/R-4.6.2.tar.gz",
+  "official": "https://cran.r-project.org/src/base/R-4/R-4.6.2.tar.gz",
+  "bytes": 39925606,
+  "sha256": "c297040f6392b1dac6e5c0eb398422cfdaedf540ae2205edb9ad0d10cb10ee00",
+  "parts": [
+    "R-4.6.2.tar.gz.part001",
+    "R-4.6.2.tar.gz.part002",
+    "R-4.6.2.tar.gz.part003",
+    "R-4.6.2.tar.gz.part004",
+    "R-4.6.2.tar.gz.part005"
+  ]
+}

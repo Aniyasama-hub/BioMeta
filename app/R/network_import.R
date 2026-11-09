@@ -159,7 +159,7 @@ tb_write_interactive_network <- function(bundle, style, root, output) {
     )
     for (key in names(replacements)) html <- gsub(key, replacements[[key]], html, fixed = TRUE)
     parts <- strsplit(html, "__NETWORK_DATA__", fixed = TRUE)[[1]]
-    writeLines(paste0(parts[1], encoded, parts[2]),
+    writeLines(tb_localize_editor(paste0(parts[1], encoded, parts[2]), root),
       file.path(output, if (advanced) "ppi-studio.html" else "network.html"), useBytes = TRUE)
   }
   render(FALSE)

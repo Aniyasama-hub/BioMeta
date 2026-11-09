@@ -1,0 +1,24 @@
+{
+  "version": "4.6.2",
+  "file": "R-4.6.2-win.exe",
+  "source": "https://mirrors.tuna.tsinghua.edu.cn/CRAN/bin/windows/base/R-4.6.2-win.exe",
+  "official": "https://cran.r-project.org/bin/windows/base/R-4.6.2-win.exe",
+  "sha256": "b0b0053baa1963b6d8a28c9642d50107ef9ce2f41c8b9a90e952846c8918b38a",
+  "md5": "d01b7413cce5540a35eaf8295ef32197",
+  "bytes": 91363600,
+  "source_archive": "https://cran.r-project.org/src/base/R-4/R-4.6.2.tar.gz",
+  "license": "GPL-2 | GPL-3",
+  "parts": [
+    "R-4.6.2-win.exe.part001",
+    "R-4.6.2-win.exe.part002",
+    "R-4.6.2-win.exe.part003",
+    "R-4.6.2-win.exe.part004",
+    "R-4.6.2-win.exe.part005",
+    "R-4.6.2-win.exe.part006",
+    "R-4.6.2-win.exe.part007",
+    "R-4.6.2-win.exe.part008",
+    "R-4.6.2-win.exe.part009",
+    "R-4.6.2-win.exe.part010",
+    "R-4.6.2-win.exe.part011"
+  ]
+}

@@ -162,7 +162,7 @@ tb_render_figure <- function(bundle, style, root, output) {
     fontSize = style$panel_label_size * style$dpi / 72), auto_unbox = TRUE)
   template <- paste(readLines(file.path(root, "www", "figure-layout.html"), encoding = "UTF-8"), collapse = "\n")
   parts <- strsplit(template, "__FIGURE_CONFIG__", fixed = TRUE)[[1]]
-  writeLines(paste0(parts[1], gsub("<", "\\u003c", config, fixed = TRUE), parts[2]),
+  writeLines(tb_localize_editor(paste0(parts[1], gsub("<", "\\u003c", config, fixed = TRUE), parts[2]), root),
     file.path(output, "figure-layout.html"), useBytes = TRUE)
   if (!file.copy(file.path(root, "www", "figure-layout.js"), output, overwrite = TRUE)) stop("无法保存排版编辑器。")
 }

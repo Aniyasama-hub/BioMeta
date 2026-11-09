@@ -1,0 +1,37 @@
+html[data-language] button,
+html[data-language] .btn,
+html[data-language] .small-button,
+html[data-language] .nav-tabs a {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  height: auto;
+}
+html[data-language] .runtime-picker,
+html[data-language] .download-actions,
+html[data-language] .history-actions,
+html[data-language] .run-bar {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+html[data-language] .tool-card h3,
+html[data-language] .tool-nav,
+html[data-language] .control-label {
+  overflow-wrap: anywhere;
+}
+html[data-language] .reference-summary {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+html[data-language='fr'] .brand strong {
+  letter-spacing: normal;
+}
+html[data-language] .nav-tabs,
+html[data-language] .topbar-right,
+html[data-language] .bm-topbar {
+  flex-wrap: wrap;
+}
+html[data-language] .bm-sidebar a,
+html[data-language] .platform-projects a {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}

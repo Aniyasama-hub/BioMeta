@@ -1,6 +1,6 @@
 # biometa (Beta)
 
-biometa 是一套在本机运行的转录组分析工作站，面向研究肿瘤、免疫及相关疾病机制的人和小鼠 Bulk RNA-seq 数据。当前版本为 **0.2.0-beta.1**，包含分析工作站和 **BioMethod (Beta)** 方法知识库。
+biometa 是一套在本机运行的转录组分析工作站，面向研究肿瘤、免疫及相关疾病机制的人和小鼠 Bulk RNA-seq 数据。当前版本为 **0.2.0-beta.2**，包含分析工作站和 **BioMethod (Beta)** 方法知识库。
 
 项目把分析、绘图和结果整理放在同一个流程里。可以独立使用 PCA、差异表达、火山图、热图、GO、KEGG、GSEA、GSVA、PPI 和免疫评分，也可以按步骤完成 Bulk 分析，挑选图片后组图。通用绘图还包括矩阵图、Circos、桑基图、韦恩图等，共 21 个工具入口。
 
@@ -20,15 +20,11 @@ git clone https://github.com/Aniyasama-hub/BioWorkbench.git
 cd BioWorkbench
 ```
 
-安装 R 后，用自己选择的 Rscript 执行以下命令。路径只是示例，本轮测试环境为 Windows、R 4.5.1。
+双击 `Start.cmd`。首次启动查找本机 R：找到一套则直接使用，找到多套则让你选择；未找到时，可使用内置安装包、从国内镜像下载，或浏览已有 `Rscript.exe`。缺少 R 包时会先询问再安装。
 
-```powershell
-& 'C:\Program Files\R\R-4.5.1\bin\Rscript.exe' app/tools/bootstrap.R --install
-& 'C:\Program Files\R\R-4.5.1\bin\Rscript.exe' app/tools/bootstrap.R --check
-.\Start.cmd
-```
+日常启动自动进入托盘并打开浏览器。右键托盘图标可重新打开、刷新整个工作站或退出。首次准备完成后，在项目目录生成带自定义标志的 `biometa.lnk`，以后可用它直接打开。
 
-首次启动需要选择 Rscript.exe；之后可在设置中嗅探并指定不同版本。包安装需要访问 CRAN/Bioconductor。ZIP 和仓库都不捆绑 R；详细步骤见 [安装说明](INSTALL.md)。
+在 **设置 → 界面风格** 中选择简体中文、繁体中文、English 或 Français。教程正文、代码注释和研究数据保留原文。附带 R 安装包；R 包和首次使用的公共注释仍可能需要联网。详见 [安装说明](INSTALL.md)。
 
 ## 怎样开始分析
 
@@ -41,6 +37,6 @@ cd BioWorkbench
 
 ## 版本与适用范围
 
-[更新说明](RELEASE_NOTES_v0.2.0-beta.1.md) · [复检报告](app/docs/beta-review-2026-11-09.md) · [项目结构](ARCHITECTURE.md) · [操作指南](操作指南.md) · [第三方说明](app/THIRD_PARTY_NOTICES.md)
+[更新说明](RELEASE_NOTES_v0.2.0-beta.2.md) · [项目结构](ARCHITECTURE.md) · [操作指南](操作指南.md) · [第三方说明](app/THIRD_PARTY_NOTICES.md)
 
-本轮 14 个回归套件通过，覆盖示例分析、出图和主要前端交互。当前面向 Windows 本地单用户使用；未验证所有系统、R 版本或研究设计。公共注释会随数据库版本变化，编号冲突需要核实，不能通过删除报错基因代替检查。输入、设置和结果保存在本机，不随源码分发。
+当前面向 Windows 本地单用户使用；未验证所有系统、R 版本或研究设计。公共注释会随数据库版本变化，编号冲突需要核实，不能通过删除报错基因代替检查。输入、设置和结果保存在本机，不随源码分发。

@@ -6,3 +6,8 @@
 /tests export-ignore
 app/www/vendor/cytoscape.min.js -text
 *.xlsx binary
+
+/installers/*.part* binary
+/launcher/*.ico binary
+/launcher/*.png binary
+/installers/COPYRIGHTS.win -whitespace

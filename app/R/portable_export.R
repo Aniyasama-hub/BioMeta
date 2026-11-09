@@ -1,7 +1,7 @@
 # Compile only the selected analysis and its transitive helper functions into
 # one R script. No Shiny, worker launcher or source checkout is needed to run it.
 tb_portable_definitions <- function(root) {
-  modules <- c("style_schema.R", "toolbox.R", "gene_mapping.R", "pathway_options.R", "annotated_heatmap.R", "core.R", "analysis.R", "prepare.R",
+  modules <- c("style_schema.R", "toolbox.R", "interface_languages.R", "gene_mapping.R", "pathway_options.R", "annotated_heatmap.R", "core.R", "analysis.R", "prepare.R",
     "pathways.R", "ppi_prepare.R", "toolbox_analysis.R", "toolbox_render.R", "group_comparisons.R",
     "network_import.R", "public_pathways.R", "immune.R", "general_plots.R", "general_plot_render.R", "figure_layout.R", "plots.R")
   definitions <- list()

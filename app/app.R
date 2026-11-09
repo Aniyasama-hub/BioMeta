@@ -138,6 +138,8 @@ check <- function(name, label, default = FALSE) {
 workbench_ui <- function(project = "workstation") fluidPage(
   lang = "zh-CN",
   tags$head(platform_assets(project_root), tags$title("生信工作台 · biometa"), tags$script(src = "uploads.js", defer = "defer"), tags$script(src = "settings-actions.js", defer = "defer"),
+    tags$script(HTML(paste0("window.BiometaLanguage=", jsonlite::toJSON(tb_read_settings(app_root)$language, auto_unbox = TRUE), ";"))),
+    tags$script(src = "i18n.js", defer = "defer"), tags$link(rel = "stylesheet", href = "i18n.css"),
     tags$meta(name = "viewport", content = "width=device-width, initial-scale=1"),
     tags$link(rel = "stylesheet", href = "toolbox.css"),
     tags$link(rel = "stylesheet", href = "studio.css"),

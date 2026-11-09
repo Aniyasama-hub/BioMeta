@@ -9,7 +9,7 @@ tb_pathway_sources <- function(tool) {
 toolbox_source <- Filter(Negate(is.null), lapply(sys.frames(), function(frame) frame$ofile))
 if (length(toolbox_source)) source(file.path(dirname(tail(toolbox_source, 1L)[[1L]]),
   "style_schema.R"), encoding = "UTF-8")
-if (length(toolbox_source)) for (module in c("gene_mapping.R", "job_diagnostics.R", "pathway_options.R", "annotated_heatmap.R", "portable_export.R"))
+if (length(toolbox_source)) for (module in c("interface_languages.R", "gene_mapping.R", "job_diagnostics.R", "pathway_options.R", "annotated_heatmap.R", "portable_export.R"))
   source(file.path(dirname(tail(toolbox_source, 1L)[[1L]]), module), encoding = "UTF-8")
 # 本地工具箱公共接口；加载本文件不会拟合模型、联网或生成科研图片。
 `%||%` <- function(x, y) if (is.null(x)) y else x

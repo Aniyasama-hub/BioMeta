@@ -11,6 +11,8 @@ tb_system_ui <- function(root, project_ui) {
     tabsetPanel(
       tabPanel("项目工作空间", project_ui),
       tabPanel("界面风格",
+        selectInput("settings_language", "界面语言 / Language", c("简体中文" = "zh-CN", "繁體中文" = "zh-TW", "English" = "en", "Français" = "fr"), selected = cfg$language),
+        actionButton("settings_language_save", "应用语言", class = "secondary-button"),
         radioButtons("settings_theme", "选择前端风格", c("黑夜" = "night", "亮色" = "classic"), selected = cfg$theme),
         p("只改变工作站界面，不改变科研图片配色、分析参数或已有结果。"),
         actionButton("settings_theme_save", "应用并保存风格", class = "primary-button")),
@@ -53,6 +55,12 @@ tb_system_ui <- function(root, project_ui) {
 tb_settings_server <- function(input, output, session, root, refresh_history, project_ui) {
   versions <- reactiveVal("")
   candidates <- reactiveValues(rscript = NULL, python = NULL, rstudio = NULL)
+  observeEvent(input$settings_language_save, {
+    language <- input$settings_language
+    req(language %in% c("zh-CN", "zh-TW", "en", "fr"))
+    tb_save_settings(root, utils::modifyList(tb_read_settings(root), list(language = language)))
+    session$sendCustomMessage("workbench-language", language)
+  })
   observeEvent(input$settings_theme_save, tryCatch({
     theme <- input$settings_theme
     if (length(theme) != 1L || !theme %in% c("night", "classic")) stop("请选择有效的界面风格。")

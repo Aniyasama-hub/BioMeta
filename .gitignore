@@ -14,3 +14,8 @@ app/tests/_integration/
 app/tests/_enhancements/
 
 /app/examples/local-ppi/
+*.lnk
+installers/*.exe
+app/tests/_i18n/
+
+installers/*.tar.gz

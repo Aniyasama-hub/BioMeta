@@ -1,8 +1,0 @@
-app/results/
-app/tests/_output/
-app/tests/_browser/
-app/tests/_integration/
-app/examples/datasets/
-app/www/vendor/
-*.min.js
-apps/biomethod/www/vendor/

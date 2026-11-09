@@ -6,6 +6,7 @@ tb_read_settings <- function(root) {
   cfg <- utils::modifyList(list(rscript = "", python = "", rstudio = "", bioconductor = "https://bioconductor.org", retain = 0L, package_library = "", library_r = "", project_folder = "", project_auto = FALSE, theme = "night", example_dataset = "synthetic"), saved %||% list())
   cfg <- utils::modifyList(list(export_folder = "", workflow_autosave = TRUE), cfg)
   if (!cfg$theme %in% c("night", "classic")) cfg$theme <- "night"
+  if (is.null(cfg$language) || !cfg$language %in% c("zh-CN", "zh-TW", "en", "fr")) cfg$language <- "zh-CN"
   cfg
 }
 
