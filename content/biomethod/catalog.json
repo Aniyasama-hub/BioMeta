@@ -39,7 +39,8 @@
   "featured": [
     "pca",
     "gmt",
-    "bulk-rnaseq"
+    "bulk-rnaseq",
+    "wgcna"
   ],
   "articles": [
     {
@@ -669,6 +670,44 @@
         "gmt"
       ],
       "article_type": "technical",
+      "technical_articles": []
+    },
+    {
+      "id": "wgcna",
+      "title": "WGCNA分析：把成千上万个基因整理成可以追问的线索",
+      "title_en": "WGCNA: from gene co-expression to testable hypotheses",
+      "category": "methods",
+      "difficulty": "入门",
+      "tags": [
+        "WGCNA",
+        "共表达网络",
+        "转录组",
+        "模块分析",
+        "性状关联",
+        "枢纽基因"
+      ],
+      "features": [],
+      "scripts": [],
+      "references": [
+        "wgcna-2008",
+        "wgcna-tutorial-network",
+        "wgcna-tutorial-input",
+        "wgcna-tutorial-traits",
+        "wgcna-mouse-weight-2006",
+        "wgcna-faq",
+        "wgcna-tutorial-index"
+      ],
+      "file": "wgcna.md",
+      "updated": "2026-11-10",
+      "language": "zh-CN",
+      "translations": {},
+      "summary": "用8张图解释共表达、软阈值、模块与性状关联，并结合135只雌性小鼠肝脏与体重研究，说明输入、分析步骤和结果解读。",
+      "related": [
+        "pca",
+        "normalization",
+        "go-kegg"
+      ],
+      "article_type": "concept",
       "technical_articles": []
     }
   ]

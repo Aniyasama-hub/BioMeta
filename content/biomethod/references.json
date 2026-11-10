@@ -233,5 +233,103 @@
       "gmt-code"
     ],
     "verified_on": "2026-11-09"
+  },
+  {
+    "id": "wgcna-2008",
+    "title": "Langfelder & Horvath (2008). WGCNA: an R package for weighted correlation network analysis.",
+    "authors": "Peter Langfelder; Steve Horvath",
+    "year": 2008,
+    "journal": "BMC Bioinformatics",
+    "doi": "10.1186/1471-2105-9-559",
+    "url": "https://link.springer.com/article/10.1186/1471-2105-9-559",
+    "summary": "共表达、模块、TOM、模块特征向量和候选基因解释",
+    "articles": [
+      "wgcna"
+    ],
+    "verified_on": "2026-11-10"
+  },
+  {
+    "id": "wgcna-tutorial-network",
+    "title": "Langfelder & Horvath. Tutorial I, 2.a: automatic network construction.",
+    "authors": "Peter Langfelder; Steve Horvath",
+    "year": 2014,
+    "journal": "WGCNA作者文档（公开镜像）",
+    "doi": null,
+    "url": "https://edo98811.github.io/WGCNA_official_documentation/FemaleLiver-02-networkConstr-auto.pdf",
+    "summary": "软阈值诊断、blockwiseModules及模块参数",
+    "articles": [
+      "wgcna"
+    ],
+    "verified_on": "2026-11-10"
+  },
+  {
+    "id": "wgcna-tutorial-input",
+    "title": "Langfelder & Horvath. Tutorial I, 1: data input and cleaning.",
+    "authors": "Peter Langfelder; Steve Horvath",
+    "year": 2014,
+    "journal": "WGCNA作者文档（公开镜像）",
+    "doi": null,
+    "url": "https://edo98811.github.io/WGCNA_official_documentation/FemaleLiver-01-dataInput.pdf",
+    "summary": "135个起始样本、表达矩阵方向、缺失和离群、样本匹配",
+    "articles": [
+      "wgcna"
+    ],
+    "verified_on": "2026-11-10"
+  },
+  {
+    "id": "wgcna-tutorial-traits",
+    "title": "Langfelder & Horvath. Tutorial I, 3: relating modules to external information.",
+    "authors": "Peter Langfelder; Steve Horvath",
+    "year": 2014,
+    "journal": "WGCNA作者文档（公开镜像）",
+    "doi": null,
+    "url": "https://edo98811.github.io/WGCNA_official_documentation/FemaleLiver-03-relateModsToExt.pdf",
+    "summary": "ME与性状相关、GS、MM、结果输出",
+    "articles": [
+      "wgcna"
+    ],
+    "verified_on": "2026-11-10"
+  },
+  {
+    "id": "wgcna-mouse-weight-2006",
+    "title": "Ghazalpour et al. (2006). Integrating Genetic and Network Analysis to Characterize Genes Related to Mouse Weight.",
+    "authors": "Ghazalpour A et al.",
+    "year": 2006,
+    "journal": "PLoS Genetics",
+    "doi": "10.1371/journal.pgen.0020130",
+    "url": "https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.0020130",
+    "summary": "真实小鼠研究、135只雌鼠、蓝色模块MS定义及0.395/0.323/0.309",
+    "articles": [
+      "wgcna"
+    ],
+    "verified_on": "2026-11-10"
+  },
+  {
+    "id": "wgcna-faq",
+    "title": "WGCNA package FAQ, Langfelder & Horvath (updated 2020).",
+    "authors": "Peter Langfelder; Steve Horvath",
+    "year": 2020,
+    "journal": "WGCNA作者文档（公开镜像）",
+    "doi": null,
+    "url": "https://edo98811.github.io/WGCNA_official_documentation/faq.html",
+    "summary": "样本量经验建议、过滤策略、RNA-seq处理、异质性、signed与unsigned",
+    "articles": [
+      "wgcna"
+    ],
+    "verified_on": "2026-11-10"
+  },
+  {
+    "id": "wgcna-tutorial-index",
+    "title": "Tutorials for WGCNA: dataset description.",
+    "authors": "Peter Langfelder; Steve Horvath",
+    "year": null,
+    "journal": "WGCNA作者文档（公开镜像）",
+    "doi": null,
+    "url": "https://edo98811.github.io/WGCNA_official_documentation/",
+    "summary": "教程3600个表达探针、与原始研究数据及结论的关系",
+    "articles": [
+      "wgcna"
+    ],
+    "verified_on": "2026-11-10"
   }
 ]
