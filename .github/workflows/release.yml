@@ -1,0 +1,74 @@
+name: Publish BioMeta release
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/release.yml
+permissions:
+  contents: write
+concurrency:
+  group: biometa-release-beta3
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPOSITORY: ${{ github.repository }}
+    steps:
+      - name: Build verified Beta.3 assets and publish release
+        shell: python
+        run: |
+          import hashlib, io, json, os, pathlib, urllib.request, urllib.error, zipfile
+          repo = os.environ['REPOSITORY']
+          commit = '6a27f4cba2c63bd93cbffc364c515f265ca88707'
+          version = '0.2.0-beta.3'
+          tag = 'v' + version
+          api = 'https://api.github.com/repos/' + repo
+          headers = {'Authorization': 'Bearer ' + os.environ['GH_TOKEN'], 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'}
+          def request(url, method='GET', data=None, content_type='application/json'):
+              body = json.dumps(data).encode() if content_type == 'application/json' and data is not None else data
+              req = urllib.request.Request(url, data=body, method=method, headers={**headers, 'Content-Type': content_type})
+              with urllib.request.urlopen(req, timeout=600) as response:
+                  return json.load(response)
+          tree = request(api + '/git/trees/' + commit + '?recursive=1')
+          assert not tree.get('truncated')
+          expected = {f['path']: f['sha'] for f in tree['tree'] if f['type'] == 'blob'}
+          assert len(expected) == 333
+          with urllib.request.urlopen('https://codeload.github.com/' + repo + '/zip/' + commit, timeout=180) as response:
+              source = zipfile.ZipFile(io.BytesIO(response.read()))
+          prefix = source.namelist()[0].split('/')[0] + '/'
+          entries = {n[len(prefix):]: source.read(n) for n in source.namelist() if not n.endswith('/')}
+          assert set(entries) == set(expected)
+          for name, data in entries.items():
+              assert hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest() == expected[name], name
+              assert not any(p in {'tests', 'results', 'logs', '.agents'} for p in pathlib.PurePosixPath(name).parts)
+              assert not name.endswith(('.agent', '.lnk', '.log'))
+          assert json.loads(entries['shared/platform.json'])['version'] == version
+          archive = pathlib.Path('biometa-' + version + '.zip')
+          with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as output:
+              for name, data in sorted(entries.items()):
+                  output.writestr('biometa-' + version + '/' + name, data)
+          checksum = archive.with_suffix('.sha256')
+          checksum.write_text(hashlib.sha256(archive.read_bytes()).hexdigest() + '  ' + archive.name + '\n')
+          try:
+              release = request(api + '/releases/tags/' + tag)
+          except urllib.error.HTTPError as error:
+              if error.code != 404:
+                  raise
+              release = request(api + '/releases', 'POST', {'tag_name': tag, 'target_commitish': commit, 'name': 'BioMeta / BioMethod ' + version, 'body': entries['RELEASE_NOTES_v' + version + '.md'].decode(), 'draft': True, 'prerelease': True})
+          assert release['tag_name'] == tag
+          for path in (archive, checksum):
+              payload = path.read_bytes()
+              digest = 'sha256:' + hashlib.sha256(payload).hexdigest()
+              asset = next((a for a in release['assets'] if a['name'] == path.name), None)
+              if asset:
+                  assert asset['size'] == len(payload) and asset.get('digest') == digest
+              else:
+                  endpoint = release['upload_url'].split('{')[0] + '?name=' + path.name
+                  asset = request(endpoint, 'POST', payload, 'application/zip' if path.suffix == '.zip' else 'text/plain')
+                  assert asset['size'] == len(payload)
+                  if asset.get('digest'):
+                      assert asset['digest'] == digest
+          release = request(api + '/releases/' + str(release['id']), 'PATCH', {'draft': False, 'prerelease': True})
+          print('Published verified release:', release['html_url'])
