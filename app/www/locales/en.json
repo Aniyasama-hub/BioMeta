@@ -1110,7 +1110,6 @@
   "理解统计假设、参数和方法边界。": "Understanding statistical assumptions, parameters and methodological boundaries.",
   "生信分析工作站": "Bioinformatics workstation",
   "生信图片排版 · biometa": "Message image layout: biameta",
-  "生信工作台 · biometa": "Bioinformatics workstation · biometa",
   "生信方法与知识库": "Methods and knowledge hub",
   "生成 Node / Edge · 原始 Count + 分组": "Generate Node/ Edge. Original Count+Group",
   "生成 Node / Edge · 已有 DEG": "Generate Node/ Edge. Already DEG",
@@ -1737,5 +1736,6 @@
   "第 5 色": "Color 5",
   "第 6 色": "Color 6",
   "第 7 色": "Color 7",
-  "第 8 色": "Color 8"
+  "第 8 色": "Color 8",
+  "biometa · 生信分析工作站": "biometa · Bioinformatics workstation"
 }

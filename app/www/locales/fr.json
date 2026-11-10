@@ -1110,7 +1110,6 @@
   "理解统计假设、参数和方法边界。": "Comprendre les hypothèses statistiques, les paramètres et les limites méthodologiques.",
   "生信分析工作站": "Poste bioinformatique",
   "生信图片排版 · biometa": "Mise en page de l'image du message : biameta",
-  "生信工作台 · biometa": "Poste bioinformatique · biometa",
   "生信方法与知识库": "Méthodes et connaissances",
   "生成 Node / Edge · 原始 Count + 分组": "Générer un nœud/ une bordure.",
   "生成 Node / Edge · 已有 DEG": "Générer un nœud/ Edge. Déjà DEG",
@@ -1737,5 +1736,6 @@
   "第 5 色": "Couleur 5",
   "第 6 色": "Couleur 6",
   "第 7 色": "Couleur 7",
-  "第 8 色": "Couleur 8"
+  "第 8 色": "Couleur 8",
+  "biometa · 生信分析工作站": "biometa · Poste bioinformatique"
 }

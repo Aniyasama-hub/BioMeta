@@ -1,14 +1,14 @@
 # biometa / BioMethod (Beta) 安装
 
-版本：0.2.0-beta.2。面向 Windows 本机使用。ZIP 和 Git 获取同一套程序、公开示例、界面翻译与 R 安装资源。
+版本：0.2.0-beta.3。面向 Windows 本机使用。ZIP 和 Git 获取同一套程序、公开示例、界面翻译与 R 安装资源。
 
 ## 下载
 
-[下载 ZIP](https://github.com/Aniyasama-hub/BioWorkbench/archive/refs/heads/main.zip)，完整解压到可写目录；也可克隆：
+[下载 ZIP](https://github.com/Aniyasama-hub/Biometa/archive/refs/heads/main.zip)，完整解压到可写目录；也可克隆：
 
 ```powershell
-git clone https://github.com/Aniyasama-hub/BioWorkbench.git
-cd BioWorkbench
+git clone https://github.com/Aniyasama-hub/Biometa.git
+cd Biometa
 ```
 
 不要在压缩包内运行。普通完整克隆即可，无须 Git LFS。

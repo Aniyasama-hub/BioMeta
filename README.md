@@ -1,6 +1,6 @@
-# biometa (Beta)
+# biometa / BioMethod (Beta)
 
-biometa 是一套在本机运行的转录组分析工作站，面向研究肿瘤、免疫及相关疾病机制的人和小鼠 Bulk RNA-seq 数据。当前版本为 **0.2.0-beta.2**，包含分析工作站和 **BioMethod (Beta)** 方法知识库。
+biometa 是一套在本机运行的转录组分析工作站，面向研究肿瘤、免疫及相关疾病机制的人和小鼠 Bulk RNA-seq 数据。当前版本为 **0.2.0-beta.3**，包含分析工作站和 **BioMethod (Beta)** 方法知识库。
 
 项目把分析、绘图和结果整理放在同一个流程里。可以独立使用 PCA、差异表达、火山图、热图、GO、KEGG、GSEA、GSVA、PPI 和免疫评分，也可以按步骤完成 Bulk 分析，挑选图片后组图。通用绘图还包括矩阵图、Circos、桑基图、韦恩图等，共 21 个工具入口。
 
@@ -11,13 +11,21 @@ biometa 是一套在本机运行的转录组分析工作站，面向研究肿瘤
 - 自动流程支持逐步配置、返回重跑、标星选图及最终排版，不要求一次接受所有默认参数。
 - BioMethod 与工作站互相跳转，提供原理、操作、逐行代码教学和参考资料。当前有 18 篇文章、9 个源码索引和 15 条参考资料。
 
+## 两个主要入口
+
+**biometa 自动化流程**把 PCA、差异表达、火山图、热图、GO、KEGG、GSEA、GSVA、PPI 和最终组图串起来。可以调整步骤顺序、保存流程预设、逐步审核、返回重跑和标星选图。开启逐步保存后可恢复进度。每步仍需要检查参数并点击运行，自动化主要减少手动传递文件和整理结果。
+
+**BioMethod** 是同一平台的方法知识库，从左上角项目菜单进入。提供分析流程、算法原理、脚本解析和参考文献四个板块；方法介绍与独立代码教程互相关联，也能跳转到实际分析工具。浏览知识库时，已启动的分析任务继续运行。
+
+仓库地址为 Aniyasama-hub/Biometa，产品名为 biometa，知识库名称为 BioMethod。
+
 ## 下载与配置
 
-[下载 Beta ZIP](https://github.com/Aniyasama-hub/BioWorkbench/archive/refs/heads/main.zip)，完整解压；或者克隆同一仓库：
+[下载 Beta ZIP](https://github.com/Aniyasama-hub/Biometa/archive/refs/heads/main.zip)，完整解压；或者克隆同一仓库：
 
 ```powershell
-git clone https://github.com/Aniyasama-hub/BioWorkbench.git
-cd BioWorkbench
+git clone https://github.com/Aniyasama-hub/Biometa.git
+cd Biometa
 ```
 
 双击 `Start.cmd`。首次启动查找本机 R：找到一套则直接使用，找到多套则让你选择；未找到时，可使用内置安装包、从国内镜像下载，或浏览已有 `Rscript.exe`。缺少 R 包时会先询问再安装。
@@ -37,6 +45,6 @@ cd BioWorkbench
 
 ## 版本与适用范围
 
-[更新说明](RELEASE_NOTES_v0.2.0-beta.2.md) · [项目结构](ARCHITECTURE.md) · [操作指南](操作指南.md) · [第三方说明](app/THIRD_PARTY_NOTICES.md)
+[更新说明](RELEASE_NOTES_v0.2.0-beta.3.md) · [项目结构](ARCHITECTURE.md) · [操作指南](操作指南.md) · [第三方说明](app/THIRD_PARTY_NOTICES.md)
 
 当前面向 Windows 本地单用户使用；未验证所有系统、R 版本或研究设计。公共注释会随数据库版本变化，编号冲突需要核实，不能通过删除报错基因代替检查。输入、设置和结果保存在本机，不随源码分发。

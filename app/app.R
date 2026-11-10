@@ -1,4 +1,4 @@
-# 本地生信工具箱前端。启动时只构建界面；分析仅由“运行当前工具”触发。
+# biometa 工作站前端。启动时只构建界面；分析仅由“运行当前工具”触发。
 app_root <- local({
   file <- tryCatch(sys.frame(1)$ofile, error = function(e) NULL)
   if (!is.null(file)) dirname(normalizePath(file, winslash = "/")) else getwd()
@@ -137,7 +137,7 @@ check <- function(name, label, default = FALSE) {
 
 workbench_ui <- function(project = "workstation") fluidPage(
   lang = "zh-CN",
-  tags$head(platform_assets(project_root), tags$title("生信工作台 · biometa"), tags$script(src = "uploads.js", defer = "defer"), tags$script(src = "settings-actions.js", defer = "defer"),
+  tags$head(platform_assets(project_root), tags$title("biometa · 生信分析工作站"), tags$script(src = "uploads.js", defer = "defer"), tags$script(src = "settings-actions.js", defer = "defer"),
     tags$script(HTML(paste0("window.BiometaLanguage=", jsonlite::toJSON(tb_read_settings(app_root)$language, auto_unbox = TRUE), ";"))),
     tags$script(src = "i18n.js", defer = "defer"), tags$link(rel = "stylesheet", href = "i18n.css"),
     tags$meta(name = "viewport", content = "width=device-width, initial-scale=1"),

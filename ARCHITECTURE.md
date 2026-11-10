@@ -1,6 +1,6 @@
 # Beta 版本结构
 
-统一版本号和子项目标识在 `shared/platform.json`：biometa (Beta)、BioMethod (Beta)，版本 0.2.0-beta.2。
+统一版本号和子项目标识在 `shared/platform.json`：biometa (Beta)、BioMethod (Beta)，版本 0.2.0-beta.3。
 
 ```text
 Start.cmd → launcher/start.vbs → launcher/tray.ps1 → app/start.R → app/app.R
